@@ -73,6 +73,14 @@ public class QueryExecutor {
 		}
 	}
 	
+	public synchronized void execute(String sql, ParameterList parameters, StatementResultHandler handler) throws SQLException {
+		try {
+			sendSimpleQuery(sql, parameters, handler);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	private void sendSimpleQuery(String sql, StatementResultHandler handler) throws IOException {
 		LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
 		// Encoding encoding = stream.getEncoding();
@@ -88,6 +96,70 @@ public class QueryExecutor {
 		// pendingDescribePortalQueue.add(query);
 		
 		processResults(handler, 0, false);
+	}
+	
+	private void sendSimpleQuery(String sql, ParameterList parameters, StatementResultHandler handler) throws IOException {
+		LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
+		// Encoding encoding = stream.getEncoding();
+
+		String nativeSql = getNativeSql(sql, parameters); // query.toString(params);
+		
+		System.out.println("nativeSql : " + nativeSql);
+		
+		// System.out.println("===> stream.isClosed() : " + stream.isClosed()); 
+		byte[] data = nativeSql.getBytes();
+		stream.sendChar('E');
+		stream.sendInteger4(4 + data.length);
+		stream.send(data);
+		stream.flush();
+
+		// pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
+		// pendingDescribePortalQueue.add(query);
+		
+		processResults(handler, 0, false);
+	}
+	
+	public String getNativeSql(String sql, ParameterList parameters) {
+		String nativeSql = sql;
+
+	    if (parameters.getParamCount() == 0) {
+	    	return nativeSql;
+	    }
+
+	    List<Integer> bindPositions = getBindPositions(sql);
+	    
+	    System.out.println("nativeSql.length() : " + nativeSql.length());
+	    
+		int queryLength = nativeSql.length();
+		String[] params = new String[parameters.getParamCount()];
+		for (int i = 1; i <= parameters.getParamCount(); ++i) {
+			String param = parameters == null ? "?" : parameters.toString(i, true);
+			params[i - 1] = param;
+			queryLength += param.length() - 1;
+		}
+
+		StringBuilder sbuf = new StringBuilder(queryLength);
+		sbuf.append(nativeSql, 0, bindPositions.get(0));
+
+		for (int i = 1; i <= params.length; ++i) {
+			sbuf.append(params[i - 1]);
+			int nextBind = i < params.length ? bindPositions.get(i) : nativeSql.length();
+			sbuf.append(nativeSql, bindPositions.get(i - 1) + 1, nextBind);
+		}
+		
+		return sbuf.toString();
+	}
+	
+	private List<Integer> getBindPositions(String sql) {
+		List<Integer> bindPositions = new ArrayList<Integer> ();
+		int index = sql.indexOf("?");
+		
+		while(index != -1) {
+			bindPositions.add(index);
+			index = sql.indexOf("?", index + "?".length());
+		}
+		
+		return bindPositions;
 	}
 	
 	public final Object createQueryKey(String sql, boolean escapeProcessing, boolean isParameterized, String @Nullable... columnNames) {

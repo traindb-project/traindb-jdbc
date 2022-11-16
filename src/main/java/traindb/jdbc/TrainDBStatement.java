@@ -232,8 +232,7 @@ public class TrainDBStatement implements Statement {
 		// return adaptiveFetch;
 		return false;
 	}
-
-
+	
 	@Override
 	public <T> T unwrap(Class<T> iface) throws SQLException {
 		// TODO Auto-generated method stub

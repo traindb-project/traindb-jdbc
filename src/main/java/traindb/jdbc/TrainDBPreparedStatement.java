@@ -21,26 +21,92 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
 
+import traindb.jdbc.TrainDBStatement.StatementResultHandler;
+import traindb.jdbc.core.Oid;
+import traindb.jdbc.core.ParameterList;
+import traindb.jdbc.util.GT;
+import traindb.jdbc.util.TrainDBException;
+import traindb.jdbc.util.TrainDBState;
+
 public class TrainDBPreparedStatement extends TrainDBStatement implements PreparedStatement {
+	protected final TrainDBConnection connection;
 	protected final String sql;
+	protected final ParameterList preparedParameters; // Parameter values for prepared statement.
 	
 	public TrainDBPreparedStatement(TrainDBConnection connection, String sql, int rsType, int rsConcurrency, int rsHoldability) {
-		/* this(connection, rsType, rsConcurrency, rsHoldability); */
 		super(connection, rsType, rsConcurrency, rsHoldability);
 		
+		this.connection = connection;
 		this.sql = sql;
+		this.preparedParameters = new ParameterList(sql);
+	}
+	
+	public boolean executeWithFlags(int flags) throws SQLException {
+		/*
+		try {
+			checkClosed();
+
+			execute(this.sql, preparedParameters, flags);
+
+			synchronized (this) {
+				checkClosed();
+				return (result != null && result.getResultSet() != null);
+			}
+		} finally {
+			defaultTimeZone = null;
+		}
+		*/
+		
+		checkClosed();
+		
+		StatementResultHandler handler = new StatementResultHandler();
+		
+	    synchronized (this) {
+	    	result = null;
+	    }
+	    
+    	System.out.println("==> Execute Start");
+    	connection.getQueryExecutor().execute(sql, preparedParameters, handler);
+    	System.out.println("==> Execute End");
+    
+	    synchronized (this) {
+	    	checkClosed();
+
+			ResultWrapper currentResult = handler.getResults();
+			
+			result = currentResult;
+	    }
+		
+		synchronized (this) {
+			checkClosed();
+			return (result != null && result.getResultSet() != null);
+		}
+	}
+	
+	private void bindString(int paramIndex, String s, int oid) throws SQLException {
+		preparedParameters.setStringParameter(paramIndex, s, oid);
+	}
+	
+	protected void bindInt(int paramIndex, int x) throws SQLException {
+		preparedParameters.setIntParameter(paramIndex, x);
+	}
+
+	protected void bindLiteral(int paramIndex, String s, int oid) throws SQLException {
+		preparedParameters.setLiteralParameter(paramIndex, s, oid);
 	}
 	
 	@Override
+	public ResultSet executeQuery(String sql) throws SQLException {
+		throw new TrainDBException(GT.tr("Can''t use query methods that take a query string on a PreparedStatement."), TrainDBState.WRONG_OBJECT_TYPE);
+	}
+	  
+	@Override
 	public ResultSet executeQuery() throws SQLException {
-		return null;
-		/*
 		if (!executeWithFlags(0)) {
-		      throw new TrainDBException(GT.tr("No results were returned by the query."), TrainDBState.NO_DATA);
+			throw new TrainDBException(GT.tr("No results were returned by the query."), TrainDBState.NO_DATA);
 	    }
 
 	    return getSingleResultSet();
-	    */
 	}
 
 	@Override
@@ -69,32 +135,76 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 
 	@Override
 	public void setShort(int parameterIndex, short x) throws SQLException {
-		// TODO Auto-generated method stub
-		
+	    checkClosed();
+	    /*
+	    if (connection.binaryTransferSend(Oid.INT2)) {
+	      byte[] val = new byte[2];
+	      ByteConverter.int2(val, 0, x);
+	      bindBytes(parameterIndex, val, Oid.INT2);
+	      return;
+	    }
+	    */
+	    
+	    bindLiteral(parameterIndex, Integer.toString(x), Oid.INT2);
 	}
 
 	@Override
 	public void setInt(int parameterIndex, int x) throws SQLException {
-		// TODO Auto-generated method stub
-		
+	    checkClosed();
+	    /*
+	    if (connection.binaryTransferSend(Oid.INT4)) {
+	      byte[] val = new byte[4];
+	      ByteConverter.int4(val, 0, x);
+	      bindBytes(parameterIndex, val, Oid.INT4);
+	      return;
+	    }
+	    */
+	    
+	    bindInt(parameterIndex, x);
 	}
 
 	@Override
 	public void setLong(int parameterIndex, long x) throws SQLException {
-		// TODO Auto-generated method stub
+		checkClosed();
+		/*
+	    if (connection.binaryTransferSend(Oid.INT8)) {
+	      byte[] val = new byte[8];
+	      ByteConverter.int8(val, 0, x);
+	      bindBytes(parameterIndex, val, Oid.INT8);
+	      return;
+	    }
+	    */
 		
+	    bindLiteral(parameterIndex, Long.toString(x), Oid.INT8);
 	}
 
 	@Override
 	public void setFloat(int parameterIndex, float x) throws SQLException {
-		// TODO Auto-generated method stub
-		
+		checkClosed();
+		/*
+	    if (connection.binaryTransferSend(Oid.FLOAT4)) {
+	      byte[] val = new byte[4];
+	      ByteConverter.float4(val, 0, x);
+	      bindBytes(parameterIndex, val, Oid.FLOAT4);
+	      return;
+	    }
+	    */
+	    bindLiteral(parameterIndex, Float.toString(x), Oid.FLOAT8);
 	}
 
 	@Override
 	public void setDouble(int parameterIndex, double x) throws SQLException {
-		// TODO Auto-generated method stub
-		
+	    checkClosed();
+	    /*
+	    if (connection.binaryTransferSend(Oid.FLOAT8)) {
+	      byte[] val = new byte[8];
+	      ByteConverter.float8(val, 0, x);
+	      bindBytes(parameterIndex, val, Oid.FLOAT8);
+	      return;
+	    }
+	    */
+	    
+	    bindLiteral(parameterIndex, Double.toString(x), Oid.FLOAT8);
 	}
 
 	@Override
@@ -105,8 +215,13 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 
 	@Override
 	public void setString(int parameterIndex, String x) throws SQLException {
-		// TODO Auto-generated method stub
+		checkClosed();
 		
+	    if (x == null) {
+	    	preparedParameters.setNull(parameterIndex, Oid.VARCHAR);
+	    } else {
+	    	bindString(parameterIndex, x, Oid.VARCHAR);
+	    }
 	}
 
 	@Override
@@ -171,8 +286,7 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 
 	@Override
 	public boolean execute() throws SQLException {
-		// TODO Auto-generated method stub
-		return false;
+		return executeWithFlags(0);
 	}
 
 	@Override
