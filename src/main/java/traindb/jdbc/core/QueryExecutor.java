@@ -202,7 +202,7 @@ public class QueryExecutor {
 	    while (!endQuery) {
 	    	c = stream.receiveChar();
 	    	
-	    	System.out.println("Receive Type : " + c);
+	    	// System.out.println("Receive Type : " + c);
 	    	
 	    	switch (c) {
 	    		/*
