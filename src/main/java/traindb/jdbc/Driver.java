@@ -330,7 +330,7 @@ public final class Driver implements java.sql.Driver {
 			hosts.setLength(hosts.length() - 1);
 			ports.setLength(hosts.length() - 1);
 
-			urlProps.setProperty("server.hose", hosts.toString());
+			urlProps.setProperty("server.host", hosts.toString());
 			urlProps.setProperty("server.port", ports.toString());
 			/* urlProps.setProperty("TrainDBNAME", "<unknown>"); */
 		} else {
