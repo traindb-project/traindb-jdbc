@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.ietf.jgss.Oid;
 
 import traindb.jdbc.core.Field;
 import traindb.jdbc.core.ResultCursor;
