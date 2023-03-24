@@ -1,6 +1,7 @@
 package traindb.jdbc.core;
 
 import java.sql.SQLException;
+import java.sql.Types;
 
 import traindb.jdbc.util.ByteConverter;
 import traindb.jdbc.util.GT;
@@ -37,7 +38,7 @@ public class ParameterList {
 		return this.paramCount;
 	}
 	
-	private void bind(int index, Object value, int oid, byte binary) throws SQLException {
+	private void bind(int index, Object value, int type, byte binary) throws SQLException {
 		if (index < 1 || index > paramValues.length) {
 			throw new TrainDBException(GT.tr("The column index is out of range: {0}, number of columns: {1}.", index, paramValues.length), TrainDBState.INVALID_PARAMETER_VALUE);
 		}
@@ -47,29 +48,29 @@ public class ParameterList {
 	    paramValues[index] = value;
 	    flags[index] = (byte) (direction(index) | IN | binary);
 
-	    if (oid == Oid.UNSPECIFIED && paramTypes[index] != Oid.UNSPECIFIED && value == NULL_OBJECT) {
+	    if (type == Types.NULL && paramTypes[index] != Types.NULL && value == NULL_OBJECT) {
 	    	return;
 	    }
 
-	    paramTypes[index] = oid;
+	    paramTypes[index] = type;
 	}
 	
-	public void setNull(int index, int oid) throws SQLException {
-		bind(index, NULL_OBJECT, oid, TEXT);
+	public void setNull(int index, int type) throws SQLException {
+		bind(index, NULL_OBJECT, type, TEXT);
 	}
 
-	public void setStringParameter(int paramIndex, String s, int oid) throws SQLException {
-		bind(paramIndex, s, oid, TEXT);
+	public void setStringParameter(int paramIndex, String s, int type) throws SQLException {
+		bind(paramIndex, s, type, TEXT);
 	}
 	
 	public void setIntParameter(int paramIndex, int value) throws SQLException {
 		byte[] data = new byte[4];
 		ByteConverter.int4(data, 0, value);
-		bind(paramIndex, data, Oid.INT4, BINARY);
+		bind(paramIndex, data, Types.INTEGER, BINARY);
 	}
 	
-	public void setLiteralParameter(int paramIndex, String s, int oid) throws SQLException {
-		bind(paramIndex, s, oid, TEXT);
+	public void setLiteralParameter(int paramIndex, String s, int type) throws SQLException {
+		bind(paramIndex, s, type, TEXT);
 	}
 	
 	private byte direction(int index) {
@@ -91,33 +92,33 @@ public class ParameterList {
 			// handle some of the numeric types
 
 			switch (paramTypes[index]) {
-			case Oid.INT2:
+			case Types.SMALLINT:
 				short s = ByteConverter.int2((byte[]) paramValue, 0);
 				return Short.toString(s);
 
-			case Oid.INT4:
+			case Types.INTEGER:
 				int i = ByteConverter.int4((byte[]) paramValue, 0);
 				return Integer.toString(i);
 
-			case Oid.INT8:
+			case Types.BIGINT:
 				long l = ByteConverter.int8((byte[]) paramValue, 0);
 				return Long.toString(l);
 
-			case Oid.FLOAT4:
+			case Types.FLOAT:
 				float f = ByteConverter.float4((byte[]) paramValue, 0);
 				if (Float.isNaN(f)) {
 					return "'NaN'::real";
 				}
 				return Float.toString(f);
 
-			case Oid.FLOAT8:
+			case Types.DOUBLE:
 				double d = ByteConverter.float8((byte[]) paramValue, 0);
 				if (Double.isNaN(d)) {
 					return "'NaN'::double precision";
 				}
 				return Double.toString(d);
 
-			case Oid.NUMERIC:
+			case Types.NUMERIC:
 				Number n = ByteConverter.numeric((byte[]) paramValue);
 				if (n instanceof Double) {
 					assert ((Double) n).isNaN();
@@ -167,19 +168,21 @@ public class ParameterList {
 			}
 			p.append('\'');
 			int paramType = paramTypes[index];
-			if (paramType == Oid.TIMESTAMP) {
+			if (paramType == Types.TIMESTAMP) {
 				p.append("::timestamp");
-			} else if (paramType == Oid.TIMESTAMPTZ) {
+			} else if (paramType == Types.TIMESTAMP_WITH_TIMEZONE) {
 				p.append("::timestamp with time zone");
-			} else if (paramType == Oid.TIME) {
+			} else if (paramType == Types.TIME) {
 				p.append("::time");
-			} else if (paramType == Oid.TIMETZ) {
+			} else if (paramType == Types.TIME_WITH_TIMEZONE) {
 				p.append("::time with time zone");
-			} else if (paramType == Oid.DATE) {
+			} else if (paramType == Types.DATE) {
 				p.append("::date");
+		        /*
 			} else if (paramType == Oid.INTERVAL) {
 				p.append("::interval");
-			} else if (paramType == Oid.NUMERIC) {
+		        */
+			} else if (paramType == Types.NUMERIC) {
 				p.append("::numeric");
 			}
 			return p.toString();

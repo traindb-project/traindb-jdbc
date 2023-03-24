@@ -19,10 +19,9 @@ import java.sql.SQLException;
 import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Calendar;
 
-import traindb.jdbc.TrainDBStatement.StatementResultHandler;
-import traindb.jdbc.core.Oid;
 import traindb.jdbc.core.ParameterList;
 import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBException;
@@ -145,7 +144,7 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 	    }
 	    */
 	    
-	    bindLiteral(parameterIndex, Integer.toString(x), Oid.INT2);
+	    bindLiteral(parameterIndex, Integer.toString(x), Types.SMALLINT);
 	}
 
 	@Override
@@ -175,7 +174,7 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 	    }
 	    */
 		
-	    bindLiteral(parameterIndex, Long.toString(x), Oid.INT8);
+	    bindLiteral(parameterIndex, Long.toString(x), Types.BIGINT);
 	}
 
 	@Override
@@ -189,7 +188,7 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 	      return;
 	    }
 	    */
-	    bindLiteral(parameterIndex, Float.toString(x), Oid.FLOAT8);
+	    bindLiteral(parameterIndex, Float.toString(x), Types.FLOAT);
 	}
 
 	@Override
@@ -204,7 +203,7 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 	    }
 	    */
 	    
-	    bindLiteral(parameterIndex, Double.toString(x), Oid.FLOAT8);
+	    bindLiteral(parameterIndex, Double.toString(x), Types.DOUBLE);
 	}
 
 	@Override
@@ -218,9 +217,9 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 		checkClosed();
 		
 	    if (x == null) {
-	    	preparedParameters.setNull(parameterIndex, Oid.VARCHAR);
+	        preparedParameters.setNull(parameterIndex, Types.VARCHAR);
 	    } else {
-	    	bindString(parameterIndex, x, Oid.VARCHAR);
+	        bindString(parameterIndex, x, Types.VARCHAR);
 	    }
 	}
 
