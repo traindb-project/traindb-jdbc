@@ -1,9 +1,9 @@
 package traindb.jdbc;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
@@ -21,6 +21,7 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +29,11 @@ import java.util.Map;
 import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import traindb.jdbc.core.Encoding;
 import traindb.jdbc.core.Field;
 import traindb.jdbc.core.ResultCursor;
 import traindb.jdbc.core.Tuple;
+import traindb.jdbc.util.ByteConverter;
 import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBException;
 import traindb.jdbc.util.TrainDBState;
@@ -50,6 +53,13 @@ public class TrainDBResultSet implements ResultSet {
 	private Tuple rowBuffer = null; // updateable rowbuffer
 	private boolean wasNullFlag = false;
 	private boolean onInsertRow = false;
+
+	private static final float LONG_MAX_FLOAT = StrictMath.nextDown(Long.MAX_VALUE);
+	private static final float LONG_MIN_FLOAT = StrictMath.nextUp(Long.MIN_VALUE);
+	private static final double LONG_MAX_DOUBLE = StrictMath.nextDown((double)Long.MAX_VALUE);
+	private static final double LONG_MIN_DOUBLE = StrictMath.nextUp((double)Long.MIN_VALUE);
+	private static final BigInteger LONGMAX = new BigInteger(Long.toString(Long.MAX_VALUE));
+	private static final BigInteger LONGMIN = new BigInteger(Long.toString(Long.MIN_VALUE));
 	
 	public TrainDBResultSet(String originalQuery, TrainDBStatement statement, Field[] fields,
 		List<Tuple> tuples, @Nullable ResultCursor cursor, int maxRows, int maxFieldSize, int resultSetType,
@@ -207,8 +217,115 @@ public class TrainDBResultSet implements ResultSet {
 
 	@Override
 	public long getLong(int columnIndex) throws SQLException {
-		// TODO Auto-generated method stub
-		return 0;
+		byte[] value = getRawValue(columnIndex);
+		if (value == null) {
+			return 0; // SQL NULL
+		}
+
+		if (isBinary(columnIndex)) {
+			int col = columnIndex - 1;
+			int type = fields[col].type;
+			if (type == Types.BIGINT) {
+				return ByteConverter.int8(value, 0);
+			}
+			return readLongValue(value, type, Long.MIN_VALUE, Long.MAX_VALUE, "long");
+		}
+
+		/*
+		Encoding encoding = connection.getEncoding();
+		if (encoding.hasAsciiNumbers()) {
+			try {
+				return getFastLong(value);
+			} catch (NumberFormatException ignored) {
+			}
+		}
+		 */
+		return toLong(getString(columnIndex));
+	}
+
+	private long readLongValue(byte[] bytes, int type, long minVal, long maxVal, String targetType) throws TrainDBException {
+		long val;
+		// currently implemented binary encoded fields
+		switch (type) {
+			case Types.SMALLINT:
+				val = ByteConverter.int2(bytes, 0);
+				break;
+			case Types.INTEGER:
+				val = ByteConverter.int4(bytes, 0);
+				break;
+			case Types.BIGINT:
+				val = ByteConverter.int8(bytes, 0);
+				break;
+			case Types.FLOAT:
+				float f = ByteConverter.float4(bytes, 0);
+				// for float values we know to be within values of long, just cast directly to long
+				if (f <= LONG_MAX_FLOAT && f >= LONG_MIN_FLOAT) {
+					val = (long) f;
+				} else {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, f),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+				break;
+			case Types.DOUBLE:
+				double d = ByteConverter.float8(bytes, 0);
+				// for double values within the values of a long, just directly cast to long
+				if (d <= LONG_MAX_DOUBLE && d >= LONG_MIN_DOUBLE) {
+					val = (long) d;
+				} else {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, d),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+				break;
+			case Types.NUMERIC:
+				Number num = ByteConverter.numeric(bytes);
+				BigInteger i = ((BigDecimal) num).toBigInteger();
+				int gt = i.compareTo(LONGMAX);
+				int lt = i.compareTo(LONGMIN);
+
+				if (gt > 0 || lt < 0) {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", num),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				} else {
+					val = num.longValue();
+				}
+				break;
+			default:
+				throw new TrainDBException(
+						GT.tr("Cannot convert the column of type {0} to requested type {1}.",
+								type, targetType),
+						TrainDBState.DATA_TYPE_MISMATCH);
+		}
+		if (val < minVal || val > maxVal) {
+			throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, val),
+					TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+		}
+		return val;
+	}
+
+	public static long toLong(@Nullable String s) throws SQLException {
+		if (s != null) {
+			try {
+				s = s.trim();
+				return Long.parseLong(s);
+			} catch (NumberFormatException e) {
+				try {
+					BigDecimal n = new BigDecimal(s);
+					BigInteger i = n.toBigInteger();
+					int gt = i.compareTo(LONGMAX);
+					int lt = i.compareTo(LONGMIN);
+
+					if (gt > 0 || lt < 0) {
+						throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", s),
+								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+					}
+					return i.longValue();
+				} catch (NumberFormatException ne) {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", s),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+			}
+		}
+		return 0; // SQL NULL
 	}
 
 	@Override
@@ -1384,5 +1501,9 @@ public class TrainDBResultSet implements ResultSet {
 	public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	protected boolean isBinary(@Positive int column) {
+		return fields[column - 1].format == Field.BINARY_FORMAT;
 	}
 }

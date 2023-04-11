@@ -2,9 +2,7 @@ package traindb.jdbc.core;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -19,24 +17,27 @@ import traindb.jdbc.util.TrainDBState;
 
 public class QueryExecutor {
 	private static final Logger LOGGER = Logger.getLogger(QueryExecutor.class.getName());
-	
+
 	private TrainDBStream stream;
 	private boolean closed = false;
-	
+
 	int QUERY_NO_RESULTS = 4;
 	int QUERY_BOTH_ROWS_AND_STATUS = 64;
-	
+
+	private String currentQuery = null;
+	private Field[] currentFields = null;
+
 	public QueryExecutor(TrainDBStream stream, Properties info) {
 		this.stream = stream;
 	}
-	
+
 	public void abort() {
 		try {
 			stream.getSocket().close();
 		} catch (IOException e) {
 			// ignore
 		}
-		
+
 		closed = true;
 	}
 
@@ -60,11 +61,11 @@ public class QueryExecutor {
 	public boolean isClosed() {
 		return closed;
 	}
-	
+
 	public void sendCloseMessage() throws IOException {
 		// TODO Auto-generated method stub
 	}
-	
+
 	public synchronized void execute(String sql, StatementResultHandler handler) {
 		try {
 			sendSimpleQuery(sql, handler);
@@ -72,7 +73,7 @@ public class QueryExecutor {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public synchronized void execute(String sql, ParameterList parameters, StatementResultHandler handler) throws SQLException {
 		try {
 			sendSimpleQuery(sql, parameters, handler);
@@ -80,45 +81,45 @@ public class QueryExecutor {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private void sendSimpleQuery(String sql, StatementResultHandler handler) throws IOException {
 		LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
 		// Encoding encoding = stream.getEncoding();
 
-		// System.out.println("===> stream.isClosed() : " + stream.isClosed()); 
 		byte[] data = sql.getBytes();
 		stream.sendChar('E');
 		stream.sendInteger4(4 + data.length);
 		stream.send(data);
 		stream.flush();
+		currentQuery = sql;
 
 		// pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
 		// pendingDescribePortalQueue.add(query);
-		
+
 		processResults(handler, 0, false);
 	}
-	
+
 	private void sendSimpleQuery(String sql, ParameterList parameters, StatementResultHandler handler) throws IOException {
 		LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
 		// Encoding encoding = stream.getEncoding();
 
 		String nativeSql = getNativeSql(sql, parameters); // query.toString(params);
-		
+
 		System.out.println("nativeSql : " + nativeSql);
-		
-		// System.out.println("===> stream.isClosed() : " + stream.isClosed()); 
+
 		byte[] data = nativeSql.getBytes();
 		stream.sendChar('E');
 		stream.sendInteger4(4 + data.length);
 		stream.send(data);
 		stream.flush();
+		currentQuery = nativeSql;
 
 		// pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
 		// pendingDescribePortalQueue.add(query);
-		
+
 		processResults(handler, 0, false);
 	}
-	
+
 	public String getNativeSql(String sql, ParameterList parameters) {
 		String nativeSql = sql;
 
@@ -127,9 +128,9 @@ public class QueryExecutor {
 	    }
 
 	    List<Integer> bindPositions = getBindPositions(sql);
-	    
+
 	    System.out.println("nativeSql.length() : " + nativeSql.length());
-	    
+
 		int queryLength = nativeSql.length();
 		String[] params = new String[parameters.getParamCount()];
 		for (int i = 1; i <= parameters.getParamCount(); ++i) {
@@ -146,39 +147,22 @@ public class QueryExecutor {
 			int nextBind = i < params.length ? bindPositions.get(i) : nativeSql.length();
 			sbuf.append(nativeSql, bindPositions.get(i - 1) + 1, nextBind);
 		}
-		
+
 		return sbuf.toString();
 	}
-	
+
 	private List<Integer> getBindPositions(String sql) {
 		List<Integer> bindPositions = new ArrayList<Integer> ();
 		int index = sql.indexOf("?");
-		
+
 		while(index != -1) {
 			bindPositions.add(index);
 			index = sql.indexOf("?", index + "?".length());
 		}
-		
+
 		return bindPositions;
 	}
-	
-	public final Object createQueryKey(String sql, boolean escapeProcessing, boolean isParameterized, String @Nullable... columnNames) {
-		Object key = null;
-		/*
-		if (columnNames == null || columnNames.length != 0) {
-			// Null means "return whatever sensible columns are" (e.g. primary key, or serial, or something like that)
-			key = new QueryWithReturningColumnsKey(sql, isParameterized, escapeProcessing, columnNames);
-		} else if (isParameterized) {
-			// If no generated columns requested, just use the SQL as a cache key
-			key = sql;
-		} else {
-			key = new BaseQueryKey(sql, false, escapeProcessing);
-		}
-		*/
-		
-		return key;
-	}
-	
+
 	protected void processResults(StatementResultHandler handler, int flags) throws IOException {
 		processResults(handler, flags, false);
 	}
@@ -201,9 +185,9 @@ public class QueryExecutor {
 
 	    while (!endQuery) {
 	    	c = stream.receiveChar();
-	    	
+
 	    	// System.out.println("Receive Type : " + c);
-	    	
+
 	    	switch (c) {
 	    		/*
 	    		case 'A': // Asynchronous Notify
@@ -272,7 +256,7 @@ public class QueryExecutor {
 	    			LOGGER.log(Level.FINEST, " <=BE CloseComplete");
 	    			break;
 				*/
-	    	
+
 	    		case 'n': // No Data (response to Describe)
 	    			/*
 	    			stream.receiveInteger4(); // len, discarded
@@ -293,7 +277,7 @@ public class QueryExecutor {
 	    				}
 	    			}
 	    			*/
-	    			
+
 	    			break;
 	    			
 	    		/*
@@ -416,19 +400,16 @@ public class QueryExecutor {
 	    			break;
 	    		}
 				*/
-	    		case 'C':
+	    		case 'C': // Command Complete
 	    			if (tuples != null) {
 	    				int messageSize = stream.receiveInteger4();
-	    				
-	    				String currentQuery = stream.receiveString();
-	    				
-	    				// There was a resultset.
-	    				handler.handleResultRows(currentQuery, null, tuples, null);
+	    				handler.handleResultRows(currentQuery, currentFields, tuples, null);
 	    				tuples = null;
 	    			}
-	    			
+
 	    			close();
-	    			
+					endQuery = true;
+
 	    			break;
 	    		case 'D': // Data Transfer (ongoing Execute response)
 	    			Tuple tuple = null;
@@ -441,7 +422,7 @@ public class QueryExecutor {
 	    			} catch (SQLException e) {
 	    				handler.handleError(e);
 	    			}
-	    			
+
 	    			if (!noResults) {
 	    				if (tuples == null) {
 	    					tuples = new ArrayList<Tuple>();
@@ -458,7 +439,7 @@ public class QueryExecutor {
 	    				} else {
 	    					length = tuple.length();
 	    				}
-	    				
+
 	    				LOGGER.log(Level.FINEST, " <=BE DataRow(len={0})", length);
 	    			}
 
@@ -507,9 +488,12 @@ public class QueryExecutor {
 	    				endQuery = true;
 	    			}
 	    			break;
+    			*/
 
 	    		case 'T': // Row Description (response to Describe)
-	    			Field[] fields = receiveFields();
+	    			currentFields = receiveFields();
+
+					/*
 	    			tuples = new ArrayList<Tuple>();
 
 	    			SimpleQuery query = castNonNull(pendingDescribePortalQueue.peekFirst());
@@ -526,8 +510,10 @@ public class QueryExecutor {
 	    				handler.handleResultRows(currentQuery, fields, tuples, null);
 	    				tuples = null;
 	    			}
+					 */
 	    			break;
 
+				/*
 	    		case 'Z': // Ready For Query (eventual response to Sync)
 	    			receiveRFQ();
 	    			if (!pendingExecuteQueue.isEmpty() && castNonNull(pendingExecuteQueue.peekFirst()).asSimple) {
@@ -574,47 +560,35 @@ public class QueryExecutor {
 	    			pendingBindQueue.clear(); // No more BindComplete messages expected.
 	    			pendingExecuteQueue.clear(); // No more query executions expected.
 	    			break;
-
-	    		case 'G': // CopyInResponse
-	    			LOGGER.log(Level.FINEST, " <=BE CopyInResponse");
-	    			LOGGER.log(Level.FINEST, " FE=> CopyFail");
-
-	    			// COPY sub-protocol is not implemented yet
-	    			// We'll send a CopyFail message for COPY FROM STDIN so that
-	    			// server does not wait for the data.
-
-	    			byte[] buf = "COPY commands are only supported using the CopyManager API.".getBytes(StandardCharsets.US_ASCII);
-	    			stream.sendChar('f');
-	    			stream.sendInteger4(buf.length + 4 + 1);
-	    			stream.send(buf);
-	    			stream.sendChar(0);
-	    			stream.flush();
-	    			sendSync(); // send sync message
-	    			skipMessage(); // skip the response message
-	    			break;
-
-	    		case 'H': // CopyOutResponse
-	    			LOGGER.log(Level.FINEST, " <=BE CopyOutResponse");
-
-	    			skipMessage();
-	    			// In case of CopyOutResponse, we cannot abort data transfer,
-	    			// so just throw an error and ignore CopyData messages
-	    			handler.handleError(new PSQLException(GT.tr("COPY commands are only supported using the CopyManager API."),PSQLState.NOT_IMPLEMENTED));
-	    			break;
-
-	    		case 'c': // CopyDone
-	    			skipMessage();
-	    			LOGGER.log(Level.FINEST, " <=BE CopyDone");
-	    			break;
-
-	    		case 'd': // CopyData
-	    			skipMessage();
-	    			LOGGER.log(Level.FINEST, " <=BE CopyData");
-	    			break;
 	    		 */
 	    		default:
 	    			throw new IOException("Unexpected packet type: " + c);
 	    	}
 	    }
+	}
+
+	private Field[] receiveFields() throws IOException {
+		stream.receiveInteger4(); // MESSAGE SIZE
+		int len = stream.receiveInteger2();
+		Field[] fields = new Field[len];
+
+		if (LOGGER.isLoggable(Level.FINEST)) {
+			LOGGER.log(Level.FINEST, " <=BE RowDescription({0})", len);
+		}
+
+		for (int i = 0; i < len; i++) {
+			String columnLabel = stream.receiveCanonicalString();
+			//int tableOid = stream.receiveInteger4();
+			//short positionInTable = (short) stream.receiveInteger2();
+			int type = stream.receiveInteger4();
+			int typeSize = stream.receiveInteger4();
+			int typeModifier = stream.receiveInteger4();
+			int format = stream.receiveInteger2();
+			fields[i] = new Field(columnLabel, type, typeSize, typeModifier, format);
+
+			LOGGER.log(Level.FINEST, "        {0}", fields[i]);
+		}
+
+		return fields;
 	}
 }

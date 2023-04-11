@@ -280,6 +280,22 @@ public class TrainDBStream implements Closeable, Flushable {
 
 		return (int2Buf[0] & 0xFF) << 8 | int2Buf[1] & 0xFF;
 	}
+
+	/**
+	 * Receives a null-terminated string from the backend and attempts to decode to a
+	 * {@link Encoding#decodeCanonicalized(byte[], int, int) canonical} {@code String}.
+	 * If we don't see a null, then we assume something has gone wrong.
+	 *
+	 * @return string from back end
+	 * @throws IOException if an I/O error occurs, or end of file
+	 * @see Encoding#decodeCanonicalized(byte[], int, int)
+	 */
+	public String receiveCanonicalString() throws IOException {
+		int len = input.scanCStringLength();
+		String res = encoding.decodeCanonicalized(input.getBuffer(), input.getIndex(), len - 1);
+		input.skip(len);
+		return res;
+	}
 	
 	/**
 	 * Read a tuple from the back end. A tuple is a two dimensional array of bytes. This variant reads
@@ -291,13 +307,15 @@ public class TrainDBStream implements Closeable, Flushable {
 	 */
 	public Tuple receiveTuple() throws IOException, OutOfMemoryError, SQLException {
 	    int messageSize = receiveInteger4(); // MESSAGE SIZE
-	    // System.out.println("==> messageSize : " + messageSize);
-	    
 	    int nf = receiveInteger2();
+		//size = messageSize - 4 bytes of message size - 2 bytes of field count - 4 bytes for each column length
+		int dataToReadSize = messageSize - 4 - 2 - 4 * nf;
+		setMaxRowSizeBytes(dataToReadSize);
 	    
 	    byte[][] answer = new byte[nf][];
-	    
-	    OutOfMemoryError oom = null;
+
+		increaseByteCounter(dataToReadSize);
+		OutOfMemoryError oom = null;
 	    
 	    for (int i = 0; i < nf; ++i) {
 			int size = receiveInteger4();
@@ -305,8 +323,6 @@ public class TrainDBStream implements Closeable, Flushable {
 				try {
 					answer[i] = new byte[size];
 					receive(answer[i], 0, size);
-					
-					// System.out.println("==> answer " + i + " : " + new String(answer[i]));
 				} catch (OutOfMemoryError oome) {
 					oom = oome;
 					skip(size);
@@ -318,7 +334,6 @@ public class TrainDBStream implements Closeable, Flushable {
 	    	throw oom;
 	    }
 	    
-	    // System.out.println("==> create Tuple");
 	    return new Tuple(answer);
 	}
 
