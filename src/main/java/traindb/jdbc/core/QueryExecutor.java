@@ -582,9 +582,8 @@ public class QueryExecutor {
 			//short positionInTable = (short) stream.receiveInteger2();
 			int type = stream.receiveInteger4();
 			int typeSize = stream.receiveInteger4();
-			int typeModifier = stream.receiveInteger4();
 			int format = stream.receiveInteger2();
-			fields[i] = new Field(columnLabel, type, typeSize, typeModifier, format);
+			fields[i] = new Field(columnLabel, type, typeSize, format);
 
 			LOGGER.log(Level.FINEST, "        {0}", fields[i]);
 		}

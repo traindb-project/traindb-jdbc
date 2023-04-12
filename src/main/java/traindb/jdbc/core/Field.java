@@ -6,15 +6,13 @@ public class Field {
 
   public String name;
   public final int type;
-  public final int format;
   public final int size;
-  public final int mod;
+  public final int format;
 
-  public Field(String name, int type, int size, int mod, int format) {
+  public Field(String name, int type, int size, int format) {
     this.name = name;
     this.type = type;
     this.size = size;
-    this.mod = mod;
     this.format = format;
   }
 

@@ -10,6 +10,7 @@ import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.Date;
+import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.ResultSet;
@@ -29,7 +30,6 @@ import java.util.Map;
 import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import traindb.jdbc.core.Encoding;
 import traindb.jdbc.core.Field;
 import traindb.jdbc.core.ResultCursor;
 import traindb.jdbc.core.Tuple;
@@ -38,6 +38,7 @@ import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBException;
 import traindb.jdbc.util.TrainDBState;
 
+// Borrowed from org.postgresql.jdbc.PgResultSet
 public class TrainDBResultSet implements ResultSet {
 	private final String originalQuery;
 	private final Connection connection;
@@ -58,16 +59,17 @@ public class TrainDBResultSet implements ResultSet {
 	private static final float LONG_MIN_FLOAT = StrictMath.nextUp(Long.MIN_VALUE);
 	private static final double LONG_MAX_DOUBLE = StrictMath.nextDown((double)Long.MAX_VALUE);
 	private static final double LONG_MIN_DOUBLE = StrictMath.nextUp((double)Long.MIN_VALUE);
-	private static final BigInteger LONGMAX = new BigInteger(Long.toString(Long.MAX_VALUE));
-	private static final BigInteger LONGMIN = new BigInteger(Long.toString(Long.MIN_VALUE));
-	
+
 	public TrainDBResultSet(String originalQuery, TrainDBStatement statement, Field[] fields,
 		List<Tuple> tuples, @Nullable ResultCursor cursor, int maxRows, int maxFieldSize, int resultSetType,
 		int resultSetConcurrency, int resultSetHoldability, boolean adaptiveFetch) throws SQLException {
-		if (tuples == null)	throw new NullPointerException("tuples must be non-null");
-		
-		// if (fields == null)	throw new NullPointerException("fields must be non-null");
-		
+		if (tuples == null)	{
+			throw new NullPointerException("tuples must be non-null");
+		}
+		if (fields == null)	{
+			throw new NullPointerException("fields must be non-null");
+		}
+
 		this.originalQuery = originalQuery;
 		this.connection = statement.getConnection();
 		this.statement = statement;
@@ -79,24 +81,24 @@ public class TrainDBResultSet implements ResultSet {
 		// this.resultsettype = rsType;
 		this.resultsetconcurrency = resultSetConcurrency;
 		// this.adaptiveFetch = adaptiveFetch;
-		
+
 		// Constructor doesn't have fetch size and can't be sure if fetch size was used so initial value would be the number of rows
 		// this.lastUsedFetchSize = tuples.size();
 	}
-	
+
 	byte[] getRawValue(@Positive int column) throws SQLException {
 	    checkClosed();
-	    
+
 	    if (thisRow == null) {
 	    	throw new TrainDBException(GT.tr("ResultSet not positioned properly, perhaps you need to call next."), TrainDBState.INVALID_CURSOR_STATE);
 	    }
-	    
-	    // checkColumnIndex(column);
+
+	    checkColumnIndex(column);
 	    byte[] bytes = thisRow.get(column - 1);
 	    wasNullFlag = bytes == null;
 	    return bytes;
 	}
-	
+
 	private void initRowBuffer() {
 		thisRow = rows.get(currentRow);
 		// We only need a copy of the current row if we're going to
@@ -107,13 +109,13 @@ public class TrainDBResultSet implements ResultSet {
 			rowBuffer = null;
 		}
 	}
-	
+
 	private void checkColumnIndex(@Positive int column) throws SQLException {
 		if (column < 1 || column > fields.length) {
 			throw new TrainDBException(GT.tr("The column index is out of range: {0}, number of columns: {1}.", column, fields.length), TrainDBState.INVALID_PARAMETER_VALUE);
 		}
 	}
-	
+
 	private String trimString(@Positive int columnIndex, String string) throws SQLException {
 		// we need to trim if maxsize is set and the length is greater than maxsize and the
 		// type of this column is a candidate for trimming
@@ -124,10 +126,10 @@ public class TrainDBResultSet implements ResultSet {
 			return string;
 		}
 		*/
-		
+
 		return string;
 	}
-	
+
 	protected void checkClosed() throws SQLException {
 		if (rows == null) {
 			throw new TrainDBException(GT.tr("This ResultSet is closed."), TrainDBState.OBJECT_NOT_IN_STATE);
@@ -170,7 +172,7 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void close() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -181,13 +183,11 @@ public class TrainDBResultSet implements ResultSet {
 
 	@Override
 	public String getString(int columnIndex) throws SQLException {
-		// connection.getLogger().log(Level.FINEST, "  getString columnIndex: {0}", columnIndex);
-
 		byte[] value = getRawValue(columnIndex);
 	    if (value == null) {
 	    	return null;
 	    }
-	    
+
 	    return trimString(columnIndex, new String(value));
 	}
 
@@ -205,14 +205,40 @@ public class TrainDBResultSet implements ResultSet {
 
 	@Override
 	public short getShort(int columnIndex) throws SQLException {
-		// TODO Auto-generated method stub
-		return 0;
+		byte[] value = getRawValue(columnIndex);
+		if (value == null) {
+			return 0; // SQL NULL
+		}
+
+		if (isBinary(columnIndex)) {
+			int col = columnIndex - 1;
+			int type = fields[col].type;
+			if (type == Types.SMALLINT) {
+				return ByteConverter.int2(value, 0);
+			}
+			return (short) readLongValue(value, type, Short.MIN_VALUE, Short.MAX_VALUE, "short");
+		}
+
+		return toShort(getString(columnIndex));
 	}
 
 	@Override
 	public int getInt(int columnIndex) throws SQLException {
-		// TODO Auto-generated method stub
-		return 0;
+		byte[] value = getRawValue(columnIndex);
+		if (value == null) {
+			return 0; // SQL NULL
+		}
+
+		if (isBinary(columnIndex)) {
+			int col = columnIndex - 1;
+			int type = fields[col].type;
+			if (type == Types.INTEGER) {
+				return ByteConverter.int4(value, 0);
+			}
+			return (int) readLongValue(value, type, Integer.MIN_VALUE, Integer.MAX_VALUE, "int");
+		}
+
+		return toInt(getString(columnIndex));
 	}
 
 	@Override
@@ -231,113 +257,47 @@ public class TrainDBResultSet implements ResultSet {
 			return readLongValue(value, type, Long.MIN_VALUE, Long.MAX_VALUE, "long");
 		}
 
-		/*
-		Encoding encoding = connection.getEncoding();
-		if (encoding.hasAsciiNumbers()) {
-			try {
-				return getFastLong(value);
-			} catch (NumberFormatException ignored) {
-			}
-		}
-		 */
 		return toLong(getString(columnIndex));
 	}
 
-	private long readLongValue(byte[] bytes, int type, long minVal, long maxVal, String targetType) throws TrainDBException {
-		long val;
-		// currently implemented binary encoded fields
-		switch (type) {
-			case Types.SMALLINT:
-				val = ByteConverter.int2(bytes, 0);
-				break;
-			case Types.INTEGER:
-				val = ByteConverter.int4(bytes, 0);
-				break;
-			case Types.BIGINT:
-				val = ByteConverter.int8(bytes, 0);
-				break;
-			case Types.FLOAT:
-				float f = ByteConverter.float4(bytes, 0);
-				// for float values we know to be within values of long, just cast directly to long
-				if (f <= LONG_MAX_FLOAT && f >= LONG_MIN_FLOAT) {
-					val = (long) f;
-				} else {
-					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, f),
-							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
-				}
-				break;
-			case Types.DOUBLE:
-				double d = ByteConverter.float8(bytes, 0);
-				// for double values within the values of a long, just directly cast to long
-				if (d <= LONG_MAX_DOUBLE && d >= LONG_MIN_DOUBLE) {
-					val = (long) d;
-				} else {
-					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, d),
-							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
-				}
-				break;
-			case Types.NUMERIC:
-				Number num = ByteConverter.numeric(bytes);
-				BigInteger i = ((BigDecimal) num).toBigInteger();
-				int gt = i.compareTo(LONGMAX);
-				int lt = i.compareTo(LONGMIN);
 
-				if (gt > 0 || lt < 0) {
-					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", num),
-							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
-				} else {
-					val = num.longValue();
-				}
-				break;
-			default:
-				throw new TrainDBException(
-						GT.tr("Cannot convert the column of type {0} to requested type {1}.",
-								type, targetType),
-						TrainDBState.DATA_TYPE_MISMATCH);
-		}
-		if (val < minVal || val > maxVal) {
-			throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, val),
-					TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
-		}
-		return val;
-	}
-
-	public static long toLong(@Nullable String s) throws SQLException {
-		if (s != null) {
-			try {
-				s = s.trim();
-				return Long.parseLong(s);
-			} catch (NumberFormatException e) {
-				try {
-					BigDecimal n = new BigDecimal(s);
-					BigInteger i = n.toBigInteger();
-					int gt = i.compareTo(LONGMAX);
-					int lt = i.compareTo(LONGMIN);
-
-					if (gt > 0 || lt < 0) {
-						throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", s),
-								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
-					}
-					return i.longValue();
-				} catch (NumberFormatException ne) {
-					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", s),
-							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
-				}
-			}
-		}
-		return 0; // SQL NULL
-	}
 
 	@Override
 	public float getFloat(int columnIndex) throws SQLException {
-		// TODO Auto-generated method stub
-		return 0;
+		byte[] value = getRawValue(columnIndex);
+		if (value == null) {
+			return 0; // SQL NULL
+		}
+
+		if (isBinary(columnIndex)) {
+			int col = columnIndex - 1;
+			int type = fields[col].type;
+			if (type == Types.FLOAT) {
+				return ByteConverter.float4(value, 0);
+			}
+			return (float) readDoubleValue(value, type, "float");
+		}
+
+		return toFloat(getString(columnIndex));
 	}
 
 	@Override
 	public double getDouble(int columnIndex) throws SQLException {
-		// TODO Auto-generated method stub
-		return 0;
+		byte[] value = getRawValue(columnIndex);
+		if (value == null) {
+			return 0; // SQL NULL
+		}
+
+		if (isBinary(columnIndex)) {
+			int col = columnIndex - 1;
+			int type = fields[col].type;
+			if (type == Types.DOUBLE) {
+				return ByteConverter.float8(value, 0);
+			}
+			return readDoubleValue(value, type, "double");
+		}
+
+		return toDouble(getString(columnIndex));
 	}
 
 	@Override
@@ -493,7 +453,7 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void clearWarnings() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -568,11 +528,11 @@ public class TrainDBResultSet implements ResultSet {
 	    }
 
 	    final int rows_size = rows.size();
-	    
+
 	    if (rowOffset + rows_size == 0) {
 	    	return false;
 	    }
-	    
+
 	    return (currentRow >= rows_size);
 	}
 
@@ -604,7 +564,7 @@ public class TrainDBResultSet implements ResultSet {
 		if (!rows.isEmpty()) {
 			currentRow = -1;
 		}
-		
+
 		onInsertRow = false;
 		thisRow = null;
 		rowBuffer = null;
@@ -613,9 +573,9 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void afterLast() throws SQLException {
 		// checkScrollable();
-		
+
 	    final int rows_size = rows.size();
-	    
+
 	    if (rows_size > 0) {
 	    	currentRow = rows_size;
 	    }
@@ -643,17 +603,17 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public boolean last() throws SQLException {
 		// checkScrollable();
-		
+
 		List<Tuple> rows = this.rows;
 		final int rows_size = rows.size();
 		if (rows_size <= 0) {
 			return false;
 		}
-		
+
 		currentRow = rows_size - 1;
 		initRowBuffer();
 		onInsertRow = false;
-		
+
 		return true;
 	}
 
@@ -704,7 +664,7 @@ public class TrainDBResultSet implements ResultSet {
 		if (onInsertRow) {
 			throw new TrainDBException(GT.tr("Can''t use relative move methods while on the insert row."), TrainDBState.INVALID_CURSOR_STATE);
 	    }
-		
+
 		if (currentRow - 1 < 0) {
 			currentRow = -1;
 			thisRow = null;
@@ -720,7 +680,7 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void setFetchDirection(int direction) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -732,7 +692,7 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void setFetchSize(int rows) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -774,271 +734,271 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void updateNull(int columnIndex) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBoolean(int columnIndex, boolean x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateByte(int columnIndex, byte x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateShort(int columnIndex, short x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateInt(int columnIndex, int x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateLong(int columnIndex, long x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateFloat(int columnIndex, float x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateDouble(int columnIndex, double x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateString(int columnIndex, String x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBytes(int columnIndex, byte[] x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateDate(int columnIndex, Date x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateTime(int columnIndex, Time x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateObject(int columnIndex, Object x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNull(String columnLabel) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBoolean(String columnLabel, boolean x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateByte(String columnLabel, byte x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateShort(String columnLabel, short x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateInt(String columnLabel, int x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateLong(String columnLabel, long x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateFloat(String columnLabel, float x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateDouble(String columnLabel, double x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateString(String columnLabel, String x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBytes(String columnLabel, byte[] x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateDate(String columnLabel, Date x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateTime(String columnLabel, Time x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateObject(String columnLabel, Object x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void insertRow() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateRow() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void deleteRow() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void refreshRow() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void cancelRowUpdates() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void moveToInsertRow() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void moveToCurrentRow() throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1158,49 +1118,49 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void updateRef(int columnIndex, Ref x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateRef(String columnLabel, Ref x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBlob(int columnIndex, Blob x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBlob(String columnLabel, Blob x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateClob(int columnIndex, Clob x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateClob(String columnLabel, Clob x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateArray(int columnIndex, Array x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateArray(String columnLabel, Array x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1218,13 +1178,13 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void updateRowId(int columnIndex, RowId x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateRowId(String columnLabel, RowId x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1242,25 +1202,25 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void updateNString(int columnIndex, String nString) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNString(String columnLabel, String nString) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1290,13 +1250,13 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1326,169 +1286,169 @@ public class TrainDBResultSet implements ResultSet {
 	@Override
 	public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateClob(int columnIndex, Reader reader) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateClob(String columnLabel, Reader reader) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNClob(int columnIndex, Reader reader) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void updateNClob(String columnLabel, Reader reader) throws SQLException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1506,4 +1466,203 @@ public class TrainDBResultSet implements ResultSet {
 	protected boolean isBinary(@Positive int column) {
 		return fields[column - 1].format == Field.BINARY_FORMAT;
 	}
+
+	// ----------------- Formatting Methods -------------------
+
+	private static final BigInteger SHORTMAX = new BigInteger(Short.toString(Short.MAX_VALUE));
+	private static final BigInteger SHORTMIN = new BigInteger(Short.toString(Short.MIN_VALUE));
+
+	public static short toShort(@Nullable String s) throws SQLException {
+		if (s != null) {
+			try {
+				s = s.trim();
+				return Short.parseShort(s);
+			} catch (NumberFormatException e) {
+				try {
+					BigDecimal n = new BigDecimal(s);
+					BigInteger i = n.toBigInteger();
+					int gt = i.compareTo(SHORTMAX);
+					int lt = i.compareTo(SHORTMIN);
+
+					if (gt > 0 || lt < 0) {
+						throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "short", s),
+								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+					}
+					return i.shortValue();
+
+				} catch (NumberFormatException ne) {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "short", s),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+			}
+		}
+		return 0; // SQL NULL
+	}
+
+	private static final BigInteger INTMAX = new BigInteger(Integer.toString(Integer.MAX_VALUE));
+	private static final BigInteger INTMIN = new BigInteger(Integer.toString(Integer.MIN_VALUE));
+
+	public static int toInt(@Nullable String s) throws SQLException {
+		if (s != null) {
+			try {
+				s = s.trim();
+				return Integer.parseInt(s);
+			} catch (NumberFormatException e) {
+				try {
+					BigDecimal n = new BigDecimal(s);
+					BigInteger i = n.toBigInteger();
+
+					int gt = i.compareTo(INTMAX);
+					int lt = i.compareTo(INTMIN);
+
+					if (gt > 0 || lt < 0) {
+						throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "int", s),
+								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+					}
+					return i.intValue();
+
+				} catch (NumberFormatException ne) {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "int", s),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+			}
+		}
+		return 0; // SQL NULL
+	}
+
+	private static final BigInteger LONGMAX = new BigInteger(Long.toString(Long.MAX_VALUE));
+	private static final BigInteger LONGMIN = new BigInteger(Long.toString(Long.MIN_VALUE));
+
+	public static long toLong(@Nullable String s) throws SQLException {
+		if (s != null) {
+			try {
+				s = s.trim();
+				return Long.parseLong(s);
+			} catch (NumberFormatException e) {
+				try {
+					BigDecimal n = new BigDecimal(s);
+					BigInteger i = n.toBigInteger();
+					int gt = i.compareTo(LONGMAX);
+					int lt = i.compareTo(LONGMIN);
+
+					if (gt > 0 || lt < 0) {
+						throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", s),
+								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+					}
+					return i.longValue();
+				} catch (NumberFormatException ne) {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", s),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+			}
+		}
+		return 0; // SQL NULL
+	}
+
+	public static float toFloat(@Nullable String s) throws SQLException {
+		if (s != null) {
+			try {
+				s = s.trim();
+				return Float.parseFloat(s);
+			} catch (NumberFormatException e) {
+				throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "float", s),
+						TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+			}
+		}
+		return 0; // SQL NULL
+	}
+
+	public static double toDouble(@Nullable String s) throws SQLException {
+		if (s != null) {
+			try {
+				s = s.trim();
+				return Double.parseDouble(s);
+			} catch (NumberFormatException e) {
+				throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "double", s),
+						TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+			}
+		}
+		return 0; // SQL NULL
+	}
+
+	private long readLongValue(byte[] bytes, int type, long minVal, long maxVal, String targetType) throws TrainDBException {
+		long val;
+		// currently implemented binary encoded fields
+		switch (type) {
+			case Types.SMALLINT:
+				val = ByteConverter.int2(bytes, 0);
+				break;
+			case Types.INTEGER:
+				val = ByteConverter.int4(bytes, 0);
+				break;
+			case Types.BIGINT:
+				val = ByteConverter.int8(bytes, 0);
+				break;
+			case Types.FLOAT:
+				float f = ByteConverter.float4(bytes, 0);
+				// for float values we know to be within values of long, just cast directly to long
+				if (f <= LONG_MAX_FLOAT && f >= LONG_MIN_FLOAT) {
+					val = (long) f;
+				} else {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, f),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+				break;
+			case Types.DOUBLE:
+				double d = ByteConverter.float8(bytes, 0);
+				// for double values within the values of a long, just directly cast to long
+				if (d <= LONG_MAX_DOUBLE && d >= LONG_MIN_DOUBLE) {
+					val = (long) d;
+				} else {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, d),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				}
+				break;
+			case Types.NUMERIC:
+				Number num = ByteConverter.numeric(bytes);
+				BigInteger i = ((BigDecimal) num).toBigInteger();
+				int gt = i.compareTo(LONGMAX);
+				int lt = i.compareTo(LONGMIN);
+
+				if (gt > 0 || lt < 0) {
+					throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", "long", num),
+							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+				} else {
+					val = num.longValue();
+				}
+				break;
+			default:
+				throw new TrainDBException(
+						GT.tr("Cannot convert the column of type {0} to requested type {1}.",
+								type, targetType),
+						TrainDBState.DATA_TYPE_MISMATCH);
+		}
+		if (val < minVal || val > maxVal) {
+			throw new TrainDBException(GT.tr("Bad value for type {0} : {1}", targetType, val),
+					TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
+		}
+		return val;
+	}
+
+	private double readDoubleValue(byte[] bytes, int type, String targetType) throws TrainDBException {
+		// currently implemented binary encoded fields
+		switch (type) {
+			case Types.SMALLINT:
+				return ByteConverter.int2(bytes, 0);
+			case Types.INTEGER:
+				return ByteConverter.int4(bytes, 0);
+			case Types.BIGINT:
+				// might not fit but there still should be no overflow checking
+				return ByteConverter.int8(bytes, 0);
+			case Types.FLOAT:
+				return ByteConverter.float4(bytes, 0);
+			case Types.DOUBLE:
+				return ByteConverter.float8(bytes, 0);
+			case Types.NUMERIC:
+				return ByteConverter.numeric(bytes).doubleValue();
+		}
+		throw new TrainDBException(GT.tr("Cannot convert the column of type {0} to requested type {1}.",
+				JDBCType.valueOf(type).getName(), targetType),TrainDBState.DATA_TYPE_MISMATCH);
+	}
+
 }
