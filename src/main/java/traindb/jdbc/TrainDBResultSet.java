@@ -55,10 +55,11 @@ public class TrainDBResultSet implements ResultSet {
 	private boolean wasNullFlag = false;
 	private boolean onInsertRow = false;
 
-	private static final float LONG_MAX_FLOAT = StrictMath.nextDown(Long.MAX_VALUE);
-	private static final float LONG_MIN_FLOAT = StrictMath.nextUp(Long.MIN_VALUE);
-	private static final double LONG_MAX_DOUBLE = StrictMath.nextDown((double)Long.MAX_VALUE);
-	private static final double LONG_MIN_DOUBLE = StrictMath.nextUp((double)Long.MIN_VALUE);
+	private @Nullable ResultSetMetaData rsMetaData;
+
+	protected ResultSetMetaData createMetaData() throws SQLException {
+		return new TrainDBResultSetMetaData(connection, fields);
+	}
 
 	public TrainDBResultSet(String originalQuery, TrainDBStatement statement, Field[] fields,
 		List<Tuple> tuples, @Nullable ResultCursor cursor, int maxRows, int maxFieldSize, int resultSetType,
@@ -464,20 +465,97 @@ public class TrainDBResultSet implements ResultSet {
 
 	@Override
 	public ResultSetMetaData getMetaData() throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
+		checkClosed();
+		if (rsMetaData == null) {
+			rsMetaData = createMetaData();
+		}
+		return rsMetaData;
 	}
 
 	@Override
 	public Object getObject(int columnIndex) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
+		byte[] value = getRawValue(columnIndex);
+		if (value == null) {
+			return null;
+		}
+
+		Field field = fields[columnIndex - 1];
+
+		// some fields can be null, mainly from those returned by MetaData methods
+		if (field == null) {
+			wasNullFlag = true;
+			return null;
+		}
+
+		return internalGetObject(columnIndex, field);
+		/*
+		Object result = internalGetObject(columnIndex, field);
+		if (result != null) {
+			return result;
+		}
+
+		if (isBinary(columnIndex)) {
+			return connection.getObject(getPGType(columnIndex), null, value);
+		}
+		String stringValue = castNonNull(getString(columnIndex));
+		return connection.getObject(getPGType(columnIndex), stringValue, null);
+		 */
 	}
 
 	@Override
 	public Object getObject(String columnLabel) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	protected @Nullable Object internalGetObject(@Positive int columnIndex, Field field) throws SQLException {
+		switch (field.type) {
+			case Types.BOOLEAN:
+				return getBoolean(columnIndex);
+			case Types.SQLXML:
+				return getSQLXML(columnIndex);
+			case Types.TINYINT:
+			case Types.SMALLINT:
+			case Types.INTEGER:
+				return getInt(columnIndex);
+			case Types.BIGINT:
+				return getLong(columnIndex);
+			case Types.NUMERIC:
+			case Types.DECIMAL:
+				/*
+				return getNumeric(columnIndex,
+						(field.getMod() == -1) ? -1 : ((field.getMod() - 4) & 0xffff), true);
+				 */
+			    return getDouble(columnIndex);
+			case Types.REAL:
+			case Types.FLOAT:
+				return getFloat(columnIndex);
+			case Types.DOUBLE:
+				return getDouble(columnIndex);
+			case Types.CHAR:
+			case Types.VARCHAR:
+			case Types.LONGVARCHAR:
+				return getString(columnIndex);
+			case Types.DATE:
+				return getDate(columnIndex);
+			case Types.TIME:
+				return getTime(columnIndex);
+			case Types.TIMESTAMP:
+				return getTimestamp(columnIndex, null);
+			case Types.BINARY:
+			case Types.VARBINARY:
+			case Types.LONGVARBINARY:
+				return getBytes(columnIndex);
+			case Types.ARRAY:
+				return getArray(columnIndex);
+			case Types.CLOB:
+				return getClob(columnIndex);
+			case Types.BLOB:
+				return getBlob(columnIndex);
+
+			default:
+				return getString(columnIndex);
+		}
 	}
 
 	@Override
@@ -1584,6 +1662,11 @@ public class TrainDBResultSet implements ResultSet {
 		}
 		return 0; // SQL NULL
 	}
+
+	private static final float LONG_MAX_FLOAT = StrictMath.nextDown(Long.MAX_VALUE);
+	private static final float LONG_MIN_FLOAT = StrictMath.nextUp(Long.MIN_VALUE);
+	private static final double LONG_MAX_DOUBLE = StrictMath.nextDown((double)Long.MAX_VALUE);
+	private static final double LONG_MIN_DOUBLE = StrictMath.nextUp((double)Long.MIN_VALUE);
 
 	private long readLongValue(byte[] bytes, int type, long minVal, long maxVal, String targetType) throws
 			TrainDBJdbcException {
