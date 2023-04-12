@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import traindb.jdbc.util.GT;
-import traindb.jdbc.util.TrainDBException;
+import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBLogger;
 import traindb.jdbc.util.TrainDBProperty;
 import traindb.jdbc.util.TrainDBState;
@@ -78,7 +78,7 @@ public final class Driver implements java.sql.Driver {
 		try {
 			defaults = getDefaultProperties();
 		} catch (IOException ioe) {
-			throw new TrainDBException(GT.tr("Error loading default settings from driverconfig.properties"), TrainDBState.UNEXPECTED_ERROR, ioe);
+			throw new TrainDBJdbcException(GT.tr("Error loading default settings from driverconfig.properties"), TrainDBState.UNEXPECTED_ERROR, ioe);
 		}
 
 		// override defaults with provided properties
@@ -90,7 +90,7 @@ public final class Driver implements java.sql.Driver {
 				String propName = (String) e.nextElement();
 				String propValue = info.getProperty(propName);
 				if (propValue == null) {
-					throw new TrainDBException(GT.tr("Properties for the driver contains a non-string value for the key ") + propName, TrainDBState.UNEXPECTED_ERROR);
+					throw new TrainDBJdbcException(GT.tr("Properties for the driver contains a non-string value for the key ") + propName, TrainDBState.UNEXPECTED_ERROR);
 				}
 				
 				props.setProperty(propName, propValue);
@@ -119,14 +119,14 @@ public final class Driver implements java.sql.Driver {
 			thread.setDaemon(true); // Don't prevent the VM from shutting down
 			thread.start();
 			return ct.getResult(timeout);
-		} catch (TrainDBException ex1) {
+		} catch (TrainDBJdbcException ex1) {
 			logger.debug("Connection error:", ex1);
 			throw ex1;
 		} catch (AccessControlException ace) {
-			throw new TrainDBException(GT.tr("Your security policy has prevented the connection from being attempted.  You probably need to grant the connect java.net.SocketPermission to the database server host and port that you wish to connect to."), TrainDBState.UNEXPECTED_ERROR, ace);
+			throw new TrainDBJdbcException(GT.tr("Your security policy has prevented the connection from being attempted.  You probably need to grant the connect java.net.SocketPermission to the database server host and port that you wish to connect to."), TrainDBState.UNEXPECTED_ERROR, ace);
 		} catch (Exception ex2) {
 			logger.debug("Unexpected connection error:", ex2);
-			throw new TrainDBException(GT.tr("Something unusual has occurred to cause the driver to fail. Please report this exception."), TrainDBState.UNEXPECTED_ERROR, ex2);
+			throw new TrainDBJdbcException(GT.tr("Something unusual has occurred to cause the driver to fail. Please report this exception."), TrainDBState.UNEXPECTED_ERROR, ex2);
 		}
 	}
 
@@ -436,14 +436,14 @@ public final class Driver implements java.sql.Driver {
 							resultException.fillInStackTrace();
 							throw (SQLException) resultException;
 						} else {
-							throw new TrainDBException(GT.tr("Something unusual has occurred to cause the driver to fail. Please report this exception."), TrainDBState.UNEXPECTED_ERROR, resultException);
+							throw new TrainDBJdbcException(GT.tr("Something unusual has occurred to cause the driver to fail. Please report this exception."), TrainDBState.UNEXPECTED_ERROR, resultException);
 						}
 					}
 
 					long delay = expiry - TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
 					if (delay <= 0) {
 						abandoned = true;
-						throw new TrainDBException(GT.tr("Connection attempt timed out."), TrainDBState.CONNECTION_UNABLE_TO_CONNECT);
+						throw new TrainDBJdbcException(GT.tr("Connection attempt timed out."), TrainDBState.CONNECTION_UNABLE_TO_CONNECT);
 					}
 
 					try {

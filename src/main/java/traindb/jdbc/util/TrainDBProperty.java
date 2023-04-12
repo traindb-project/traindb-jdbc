@@ -4,9 +4,6 @@ import java.sql.DriverPropertyInfo;
 import java.util.Properties;
 
 import traindb.jdbc.Driver;
-import traindb.jdbc.util.GT;
-import traindb.jdbc.util.TrainDBException;
-import traindb.jdbc.util.TrainDBState;
 
 /**
  * All connection parameters that can be either set in JDBC URL, in Driver properties or in datasource setters.
@@ -389,7 +386,7 @@ public enum TrainDBProperty
      * @return evaluated value for this connection parameter converted to int
      * @throws PSQLException if it cannot be converted to int.
      */
-    public int getInt(Properties properties) throws TrainDBException
+    public int getInt(Properties properties) throws TrainDBJdbcException
     {
         String value = get(properties);
         try
@@ -398,7 +395,7 @@ public enum TrainDBProperty
         }
         catch (NumberFormatException nfe)
         {
-            throw new TrainDBException(
+            throw new TrainDBJdbcException(
                     GT.tr("{0} parameter value must be an integer but was: {1}", new Object[] { getName(), value }),
                     TrainDBState.INVALID_PARAMETER_VALUE,
                     nfe);
@@ -411,7 +408,7 @@ public enum TrainDBProperty
      * @return evaluated value for this connection parameter converted to Integer or null
      * @throws PSQLException
      */
-    public Integer getInteger(Properties properties) throws TrainDBException
+    public Integer getInteger(Properties properties) throws TrainDBJdbcException
     {
         String value = get(properties);
         if (value == null)
@@ -424,7 +421,7 @@ public enum TrainDBProperty
         }
         catch (NumberFormatException nfe)
         {
-            throw new TrainDBException(
+            throw new TrainDBJdbcException(
                     GT.tr("{0} parameter value must be an integer but was: {1}", new Object[] { getName(), value }),
                     TrainDBState.INVALID_PARAMETER_VALUE,
                     nfe);

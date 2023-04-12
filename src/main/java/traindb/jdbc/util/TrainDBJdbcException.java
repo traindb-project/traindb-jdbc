@@ -3,27 +3,27 @@ package traindb.jdbc.util;
 import java.sql.SQLException;
 
 @SuppressWarnings("serial")
-public class TrainDBException extends SQLException {
+public class TrainDBJdbcException extends SQLException {
 	private ServerErrorMessage _serverError;
 
-    public TrainDBException(String msg, TrainDBState state, Throwable cause)
+    public TrainDBJdbcException(String msg, TrainDBState state, Throwable cause)
     {
         super(msg, state == null ? null : state.getState());
         initCause(cause);
     }
 
-    public TrainDBException(String msg)
+    public TrainDBJdbcException(String msg)
     {
     	this(msg, null, null);
     }
     
-    public TrainDBException(String msg, TrainDBState state)
+    public TrainDBJdbcException(String msg, TrainDBState state)
     {
         this(msg, state, null);
         // super(msg, state == null ? null : state.getState());
     }
 
-    public TrainDBException(ServerErrorMessage serverError)
+    public TrainDBJdbcException(ServerErrorMessage serverError)
     {
         this(serverError.toString(), new TrainDBState(serverError.getSQLState()));
         _serverError = serverError;

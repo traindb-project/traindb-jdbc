@@ -7,16 +7,13 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.List;
 
-import javax.management.Query;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import traindb.jdbc.core.Field;
-import traindb.jdbc.core.QueryExecutor;
 import traindb.jdbc.core.ResultCursor;
 import traindb.jdbc.core.Tuple;
 import traindb.jdbc.util.GT;
-import traindb.jdbc.util.TrainDBException;
+import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
 public class TrainDBStatement implements Statement {
@@ -41,7 +38,7 @@ public class TrainDBStatement implements Statement {
 	@Override
 	public ResultSet executeQuery(String sql) throws SQLException {
 		if (!executeWithFlags(sql, 0)) {
-			throw new TrainDBException(GT.tr("No results were returned by the query."), TrainDBState.NO_DATA);
+			throw new TrainDBJdbcException(GT.tr("No results were returned by the query."), TrainDBState.NO_DATA);
 		}
 
 		return getSingleResultSet();
@@ -84,7 +81,7 @@ public class TrainDBStatement implements Statement {
 	
 	public boolean executeWithFlags(int flags) throws SQLException {
 		checkClosed();
-		throw new TrainDBException(GT.tr("Can''t use executeWithFlags(int) on a Statement."), TrainDBState.WRONG_OBJECT_TYPE);
+		throw new TrainDBJdbcException(GT.tr("Can''t use executeWithFlags(int) on a Statement."), TrainDBState.WRONG_OBJECT_TYPE);
 	}
 	
 	protected ResultSet getSingleResultSet() throws SQLException {
@@ -93,7 +90,7 @@ public class TrainDBStatement implements Statement {
 			ResultWrapper result = this.result;
 
 			if (result.getNext() != null) {
-				throw new TrainDBException(GT.tr("Multiple ResultSets were returned by the query."), TrainDBState.TOO_MANY_RESULTS);
+				throw new TrainDBJdbcException(GT.tr("Multiple ResultSets were returned by the query."), TrainDBState.TOO_MANY_RESULTS);
 			}
 
 			return result.getResultSet();
@@ -102,7 +99,7 @@ public class TrainDBStatement implements Statement {
 	
 	protected void checkClosed() throws SQLException {
 		if (isClosed()) {
-			throw new TrainDBException(GT.tr("This statement has been closed."), TrainDBState.OBJECT_NOT_IN_STATE);
+			throw new TrainDBJdbcException(GT.tr("This statement has been closed."), TrainDBState.OBJECT_NOT_IN_STATE);
 		}
 	}
 	
@@ -290,7 +287,7 @@ public class TrainDBStatement implements Statement {
 	public void setMaxRows(int max) throws SQLException {
 		checkClosed();
 		if (max < 0) {
-			throw new TrainDBException(GT.tr("Maximum number of rows must be a value greater than or equal to 0."), TrainDBState.INVALID_PARAMETER_VALUE);
+			throw new TrainDBJdbcException(GT.tr("Maximum number of rows must be a value greater than or equal to 0."), TrainDBState.INVALID_PARAMETER_VALUE);
 		}
 
 		maxrows = max;

@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import traindb.jdbc.util.GT;
-import traindb.jdbc.util.TrainDBException;
+import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
 public class Utils {
@@ -66,7 +66,7 @@ public class Utils {
 				for (int i = 0; i < value.length(); ++i) {
 					char ch = value.charAt(i);
 					if (ch == '\0') {
-						throw new TrainDBException(GT.tr("Zero bytes may not occur in string parameters."),
+						throw new TrainDBJdbcException(GT.tr("Zero bytes may not occur in string parameters."),
 								TrainDBState.INVALID_PARAMETER_VALUE);
 					}
 					if (ch == '\'') {
@@ -83,7 +83,7 @@ public class Utils {
 				for (int i = 0; i < value.length(); ++i) {
 					char ch = value.charAt(i);
 					if (ch == '\0') {
-						throw new TrainDBException(GT.tr("Zero bytes may not occur in string parameters."),
+						throw new TrainDBJdbcException(GT.tr("Zero bytes may not occur in string parameters."),
 								TrainDBState.INVALID_PARAMETER_VALUE);
 					}
 					if (ch == '\\' || ch == '\'') {
@@ -93,7 +93,7 @@ public class Utils {
 				}
 			}
 		} catch (IOException e) {
-			throw new TrainDBException(GT.tr("No IOException expected from StringBuffer or StringBuilder"),
+			throw new TrainDBJdbcException(GT.tr("No IOException expected from StringBuffer or StringBuilder"),
 					TrainDBState.UNEXPECTED_ERROR, e);
 		}
 	}
@@ -132,7 +132,7 @@ public class Utils {
 			for (int i = 0; i < value.length(); ++i) {
 				char ch = value.charAt(i);
 				if (ch == '\0') {
-					throw new TrainDBException(GT.tr("Zero bytes may not occur in identifiers."), TrainDBState.INVALID_PARAMETER_VALUE);
+					throw new TrainDBJdbcException(GT.tr("Zero bytes may not occur in identifiers."), TrainDBState.INVALID_PARAMETER_VALUE);
 				}
 				if (ch == '"') {
 					sbuf.append(ch);
@@ -142,7 +142,7 @@ public class Utils {
 
 			sbuf.append('"');
 		} catch (IOException e) {
-			throw new TrainDBException(GT.tr("No IOException expected from StringBuffer or StringBuilder"), TrainDBState.UNEXPECTED_ERROR, e);
+			throw new TrainDBJdbcException(GT.tr("No IOException expected from StringBuffer or StringBuilder"), TrainDBState.UNEXPECTED_ERROR, e);
 		}
 	}
 }

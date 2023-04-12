@@ -5,7 +5,7 @@ import java.sql.Types;
 
 import traindb.jdbc.util.ByteConverter;
 import traindb.jdbc.util.GT;
-import traindb.jdbc.util.TrainDBException;
+import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
 public class ParameterList {
@@ -40,7 +40,7 @@ public class ParameterList {
 	
 	private void bind(int index, Object value, int type, byte binary) throws SQLException {
 		if (index < 1 || index > paramValues.length) {
-			throw new TrainDBException(GT.tr("The column index is out of range: {0}, number of columns: {1}.", index, paramValues.length), TrainDBState.INVALID_PARAMETER_VALUE);
+			throw new TrainDBJdbcException(GT.tr("The column index is out of range: {0}, number of columns: {1}.", index, paramValues.length), TrainDBState.INVALID_PARAMETER_VALUE);
 		}
 
 	    --index;

@@ -21,7 +21,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import traindb.jdbc.util.GT;
 import traindb.jdbc.util.HostSpec;
-import traindb.jdbc.util.TrainDBException;
+import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
 // stream.java 참고
@@ -388,7 +388,8 @@ public class TrainDBStream implements Closeable, Flushable {
 		}
 	}
 
-	public void sendStream(InputStream inStream, int remaining) throws IOException, TrainDBException {
+	public void sendStream(InputStream inStream, int remaining) throws IOException,
+			TrainDBJdbcException {
 		int expectedLength = remaining;
 		if (streamBuffer == null) {
 			streamBuffer = new byte[8192];
@@ -401,7 +402,7 @@ public class TrainDBStream implements Closeable, Flushable {
 			try {
 				readCount = inStream.read(streamBuffer, 0, count);
 				if (readCount < 0) {
-					throw new TrainDBException(
+					throw new TrainDBJdbcException(
 							GT.tr("Premature end of input stream, expected {0} bytes, but only read {1}.",
 									expectedLength, expectedLength - remaining));
 				}
@@ -433,7 +434,7 @@ public class TrainDBStream implements Closeable, Flushable {
 		return connection.isClosed();
 	}
 	
-	public void setMaxResultBuffer(@Nullable String value) throws TrainDBException {
+	public void setMaxResultBuffer(@Nullable String value) throws TrainDBJdbcException {
 		// maxResultBuffer = PGPropertyMaxResultBufferParser.parseProperty(value);
 	}
 	
@@ -447,7 +448,7 @@ public class TrainDBStream implements Closeable, Flushable {
 		if (maxResultBuffer != -1) {
 			resultBufferByteCount += value;
 			if (resultBufferByteCount > maxResultBuffer) {
-				throw new TrainDBException(GT.tr("Result set exceeded maxResultBuffer limit. Received:  {0}; Current limit: {1}", String.valueOf(resultBufferByteCount), String.valueOf(maxResultBuffer)),TrainDBState.COMMUNICATION_ERROR);
+				throw new TrainDBJdbcException(GT.tr("Result set exceeded maxResultBuffer limit. Received:  {0}; Current limit: {1}", String.valueOf(resultBufferByteCount), String.valueOf(maxResultBuffer)),TrainDBState.COMMUNICATION_ERROR);
 			}
 		}
 	}
