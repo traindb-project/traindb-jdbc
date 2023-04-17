@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import traindb.jdbc.TrainDBStatement.StatementResultHandler;
 import traindb.jdbc.util.GT;
+import traindb.jdbc.util.ServerErrorMessage;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
@@ -442,23 +443,14 @@ public class QueryExecutor {
 	    			}
 
 	    			break;
-	    		/*
 	    		case 'E':
 	    			// Error Response (response to pretty much everything; backend then skips until Sync)
 	    			SQLException error = receiveErrorResponse();
 	    			handler.handleError(error);
-	    			if (willHealViaReparse(error)) {
-	    				// prepared statement ... is not valid kind of error
-	    				// Technically speaking, the error is unexpected, thus we invalidate other
-	    				// server-prepared statements just in case.
-	    				deallocateEpoch++;
-	    				if (LOGGER.isLoggable(Level.FINEST)) {
-	    					LOGGER.log(Level.FINEST, " FE: received {0}, will invalidate statements. deallocateEpoch is now {1}", new Object[]{error.getSQLState(), deallocateEpoch});
-	    				}
-	    			}
 	    			// keep processing
 	    			break;
 
+	    		/*
 	    		case 'I': { // Empty Query (end of Execute)
 	    			stream.receiveInteger4();
 
@@ -587,5 +579,25 @@ public class QueryExecutor {
 		}
 
 		return fields;
+	}
+
+	private SQLException receiveErrorResponse() throws IOException {
+		// it's possible to get more than one error message for a query
+		// see libpq comments wrt backend closing a connection
+		// so, append messages to a string buffer and keep processing
+		// check at the bottom to see if we need to throw an exception
+
+		int elen = stream.receiveInteger4();
+		assert elen > 4 : "Error response length must be greater than 4";
+
+		EncodingPredictor.DecodeResult totalMessage = stream.receiveErrorString(elen - 4);
+		ServerErrorMessage errorMsg = new ServerErrorMessage(totalMessage);
+
+		if (LOGGER.isLoggable(Level.FINEST)) {
+			LOGGER.log(Level.FINEST, " <=BE ErrorMessage({0})", errorMsg.toString());
+		}
+
+		TrainDBJdbcException error = new TrainDBJdbcException(errorMsg);
+		return error;
 	}
 }

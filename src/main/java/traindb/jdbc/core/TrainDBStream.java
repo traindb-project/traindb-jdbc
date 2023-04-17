@@ -348,6 +348,28 @@ public class TrainDBStream implements Closeable, Flushable {
 		return res;
 	}
 
+	public EncodingPredictor.DecodeResult receiveErrorString(int len) throws IOException {
+		if (!input.ensureBytes(len)) {
+			throw new EOFException();
+		}
+
+		EncodingPredictor.DecodeResult res;
+		try {
+			String value = encoding.decode(input.getBuffer(), input.getIndex(), len);
+			// no autodetect warning as the message was converted on its own
+			res = new EncodingPredictor.DecodeResult(value, null);
+		} catch (IOException e) {
+			res = EncodingPredictor.decode(input.getBuffer(), input.getIndex(), len);
+			if (res == null) {
+				Encoding enc = Encoding.defaultEncoding();
+				String value = enc.decode(input.getBuffer(), input.getIndex(), len);
+				res = new EncodingPredictor.DecodeResult(value, enc.name());
+			}
+		}
+		input.skip(len);
+		return res;
+	}
+
 	public String receiveString() throws IOException {
 		int len = input.scanCStringLength();
 		String res = encoding.decode(input.getBuffer(), input.getIndex(), len - 1);

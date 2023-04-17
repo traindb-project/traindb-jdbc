@@ -1,5 +1,7 @@
 package traindb.jdbc;
 
+import static traindb.jdbc.util.Nullness.castNonNull;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -177,7 +179,10 @@ public class TrainDBStatement implements Statement {
 		private ResultWrapper results;
 	    private ResultWrapper lastResult;
 
-	    ResultWrapper getResults() {
+		private @Nullable SQLException firstException;
+		private @Nullable SQLException lastException;
+
+		ResultWrapper getResults() {
 	    	return results;
 	    }
 
@@ -185,7 +190,7 @@ public class TrainDBStatement implements Statement {
 	    	if (results == null) {
 	    		lastResult = results = newResult;
 	    	} else {
-	    		// castNonNull(lastResult).append(newResult);
+	    		castNonNull(lastResult).append(newResult);
 	    	}
 	    }
 
@@ -207,14 +212,12 @@ public class TrainDBStatement implements Statement {
 	    }
 	    
 	    public void handleError(SQLException error) {
-	    	/*
 			if (firstException == null) {
 				firstException = lastException = error;
 	        	return;
 			}
 			castNonNull(lastException).setNextException(error);
 			this.lastException = error;
-	      */
 	    }
 	}
 	
