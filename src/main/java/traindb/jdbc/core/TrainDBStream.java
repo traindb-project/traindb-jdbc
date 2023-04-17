@@ -15,11 +15,11 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.sql.SQLException;
 
+import java.text.MessageFormat;
 import javax.net.SocketFactory;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import traindb.jdbc.util.GT;
 import traindb.jdbc.util.HostSpec;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
@@ -425,7 +425,7 @@ public class TrainDBStream implements Closeable, Flushable {
 				readCount = inStream.read(streamBuffer, 0, count);
 				if (readCount < 0) {
 					throw new TrainDBJdbcException(
-							GT.tr("Premature end of input stream, expected {0} bytes, but only read {1}.",
+							MessageFormat.format("Premature end of input stream, expected {0} bytes, but only read {1}.",
 									expectedLength, expectedLength - remaining));
 				}
 			} catch (IOException ioe) {
@@ -470,7 +470,7 @@ public class TrainDBStream implements Closeable, Flushable {
 		if (maxResultBuffer != -1) {
 			resultBufferByteCount += value;
 			if (resultBufferByteCount > maxResultBuffer) {
-				throw new TrainDBJdbcException(GT.tr("Result set exceeded maxResultBuffer limit. Received:  {0}; Current limit: {1}", String.valueOf(resultBufferByteCount), String.valueOf(maxResultBuffer)),TrainDBState.COMMUNICATION_ERROR);
+				throw new TrainDBJdbcException(MessageFormat.format("Result set exceeded maxResultBuffer limit. Received:  {0}; Current limit: {1}", String.valueOf(resultBufferByteCount), String.valueOf(maxResultBuffer)),TrainDBState.COMMUNICATION_ERROR);
 			}
 		}
 	}

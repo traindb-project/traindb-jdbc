@@ -9,7 +9,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import traindb.jdbc.TrainDBStatement.StatementResultHandler;
-import traindb.jdbc.util.GT;
 import traindb.jdbc.util.ServerErrorMessage;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
@@ -416,7 +415,7 @@ public class QueryExecutor {
 	    				tuple = stream.receiveTuple();
 	    			} catch (OutOfMemoryError oome) {
 	    				if (!noResults) {
-	    					handler.handleError(new TrainDBJdbcException(GT.tr("Ran out of memory retrieving query results."), TrainDBState.OUT_OF_MEMORY, oome));
+	    					handler.handleError(new TrainDBJdbcException("Ran out of memory retrieving query results.", TrainDBState.OUT_OF_MEMORY, oome));
 	    				}
 	    			} catch (SQLException e) {
 	    				handler.handleError(e);

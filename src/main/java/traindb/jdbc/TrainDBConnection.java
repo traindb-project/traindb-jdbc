@@ -22,7 +22,6 @@ import java.util.concurrent.Executor;
 
 import traindb.jdbc.core.ConnectionFactory;
 import traindb.jdbc.core.QueryExecutor;
-import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
@@ -370,7 +369,7 @@ public class TrainDBConnection implements Connection {
 
 	protected void checkClosed() throws SQLException {
 		if (isClosed()) {
-			throw new TrainDBJdbcException(GT.tr("This connection has been closed."), TrainDBState.CONNECTION_DOES_NOT_EXIST);
+			throw new TrainDBJdbcException("This connection has been closed.", TrainDBState.CONNECTION_DOES_NOT_EXIST);
 		}
 	}
 }

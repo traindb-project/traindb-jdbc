@@ -1,6 +1,6 @@
 package traindb.jdbc.core;
 
-import traindb.jdbc.util.GT;
+import java.text.MessageFormat;
 
 import java.io.IOException;
 import java.nio.charset.CharsetDecoder;
@@ -87,7 +87,7 @@ abstract class OptimizedUTF8Encoder extends Encoding {
 					// 0xxxxxxx -- length 1.
 				} else if (ch < 0xc0) {
 					// 10xxxxxx -- illegal!
-					throw new IOException(GT.tr("Illegal UTF-8 sequence: initial byte is {0}: {1}", "10xxxxxx", ch));
+					throw new IOException(MessageFormat.format("Illegal UTF-8 sequence: initial byte is {0}: {1}", "10xxxxxx", ch));
 				} else if (ch < 0xe0) {
 					// 110xxxxx 10xxxxxx
 					ch = ((ch & 0x1f) << 6);
@@ -113,11 +113,11 @@ abstract class OptimizedUTF8Encoder extends Encoding {
 					ch = ch | (data[in++] & 0x3f);
 					checkMinimal(ch, MIN_4_BYTES);
 				} else {
-					throw new IOException(GT.tr("Illegal UTF-8 sequence: initial byte is {0}: {1}", "11111xxx", ch));
+					throw new IOException(MessageFormat.format("Illegal UTF-8 sequence: initial byte is {0}: {1}", "11111xxx", ch));
 				}
 
 				if (ch > MAX_CODE_POINT) {
-					throw new IOException(GT.tr("Illegal UTF-8 sequence: final value is out of range: {0}", ch));
+					throw new IOException(MessageFormat.format("Illegal UTF-8 sequence: final value is out of range: {0}", ch));
 				}
 				// Convert 21-bit codepoint to Java chars:
 				// 0..ffff are represented directly as a single char
@@ -130,7 +130,7 @@ abstract class OptimizedUTF8Encoder extends Encoding {
 					chars[out++] = (char) (0xdc00 + (ch & 0x3ff)); // bottom 10 bits
 				} else if (ch >= 0xd800 && ch < 0xe000) {
 					// Not allowed to encode the surrogate range directly.
-					throw new IOException(GT.tr("Illegal UTF-8 sequence: final value is a surrogate value: {0}", ch));
+					throw new IOException(MessageFormat.format("Illegal UTF-8 sequence: final value is a surrogate value: {0}", ch));
 				} else {
 					// Normal case.
 					chars[out++] = (char) ch;
@@ -146,7 +146,7 @@ abstract class OptimizedUTF8Encoder extends Encoding {
 	private static void checkByte(int ch, int pos, int len) throws IOException {
 		if ((ch & 0xc0) != 0x80) {
 			throw new IOException(
-					GT.tr("Illegal UTF-8 sequence: byte {0} of {1} byte sequence is not 10xxxxxx: {2}", pos, len, ch));
+					MessageFormat.format("Illegal UTF-8 sequence: byte {0} of {1} byte sequence is not 10xxxxxx: {2}", pos, len, ch));
 		}
 	}
 
@@ -181,7 +181,7 @@ abstract class OptimizedUTF8Encoder extends Encoding {
 			throw new IllegalArgumentException("unexpected ch passed to checkMinimal: " + ch);
 		}
 
-		throw new IOException(GT.tr("Illegal UTF-8 sequence: {0} bytes used to encode a {1} byte value: {2}", actualLen,
+		throw new IOException(MessageFormat.format("Illegal UTF-8 sequence: {0} bytes used to encode a {1} byte value: {2}", actualLen,
 				expectedLen, ch));
 	}
 }

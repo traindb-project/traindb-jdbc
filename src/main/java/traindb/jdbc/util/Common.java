@@ -12,7 +12,7 @@ public class Common {
 				String propName = (String) e.nextElement();
 				String propValue = proFrom.getProperty(propName);
 				if (propValue == null) {
-					throw new TrainDBJdbcException(GT.tr("Properties for the driver contains a non-string value for the key ") + propName, TrainDBState.UNEXPECTED_ERROR);
+					throw new TrainDBJdbcException("Properties for the driver contains a non-string value for the key " + propName, TrainDBState.UNEXPECTED_ERROR);
 				}
 				proTo.setProperty(propName, propValue);
 			}

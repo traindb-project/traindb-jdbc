@@ -5,6 +5,7 @@
 
 package traindb.jdbc.util;
 
+import java.text.MessageFormat;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.Serializable;
@@ -41,7 +42,7 @@ public class ServerErrorMessage implements Serializable {
     this(serverError.result);
     if (serverError.encoding != null) {
       mesgParts.put(MESSAGE, mesgParts.get(MESSAGE)
-          + GT.tr(" (pgjdbc: autodetected server-encoding to be {0}, if the message is not readable, please check database logs and/or host, port, dbname, user, password, pg_hba.conf)",
+          + MessageFormat.format(" (pgjdbc: autodetected server-encoding to be {0}, if the message is not readable, please check database logs and/or host, port, dbname, user, password, pg_hba.conf)",
           serverError.encoding)
       );
     }
@@ -185,42 +186,42 @@ public class ServerErrorMessage implements Serializable {
     }
     message = mesgParts.get(DETAIL);
     if (message != null) {
-      totalMessage.append("\n  ").append(GT.tr("Detail: {0}", message));
+      totalMessage.append("\n  ").append(MessageFormat.format("Detail: {0}", message));
     }
 
     message = mesgParts.get(HINT);
     if (message != null) {
-      totalMessage.append("\n  ").append(GT.tr("Hint: {0}", message));
+      totalMessage.append("\n  ").append(MessageFormat.format("Hint: {0}", message));
     }
     message = mesgParts.get(POSITION);
     if (message != null) {
-      totalMessage.append("\n  ").append(GT.tr("Position: {0}", message));
+      totalMessage.append("\n  ").append(MessageFormat.format("Position: {0}", message));
     }
     message = mesgParts.get(WHERE);
     if (message != null) {
-      totalMessage.append("\n  ").append(GT.tr("Where: {0}", message));
+      totalMessage.append("\n  ").append(MessageFormat.format("Where: {0}", message));
     }
 
     if (LOGGER.isLoggable(Level.FINEST)) {
       String internalQuery = mesgParts.get(INTERNAL_QUERY);
       if (internalQuery != null) {
-        totalMessage.append("\n  ").append(GT.tr("Internal Query: {0}", internalQuery));
+        totalMessage.append("\n  ").append(MessageFormat.format("Internal Query: {0}", internalQuery));
       }
       String internalPosition = mesgParts.get(INTERNAL_POSITION);
       if (internalPosition != null) {
-        totalMessage.append("\n  ").append(GT.tr("Internal Position: {0}", internalPosition));
+        totalMessage.append("\n  ").append(MessageFormat.format("Internal Position: {0}", internalPosition));
       }
 
       String file = mesgParts.get(FILE);
       String line = mesgParts.get(LINE);
       String routine = mesgParts.get(ROUTINE);
       if (file != null || line != null || routine != null) {
-        totalMessage.append("\n  ").append(GT.tr("Location: File: {0}, Routine: {1}, Line: {2}",
+        totalMessage.append("\n  ").append(MessageFormat.format("Location: File: {0}, Routine: {1}, Line: {2}",
             file, routine, line));
       }
       message = mesgParts.get(SQLSTATE);
       if (message != null) {
-        totalMessage.append("\n  ").append(GT.tr("Server SQLState: {0}", message));
+        totalMessage.append("\n  ").append(MessageFormat.format("Server SQLState: {0}", message));
       }
     }
 

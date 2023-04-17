@@ -1,6 +1,7 @@
 package traindb.jdbc.util;
 
 import java.sql.DriverPropertyInfo;
+import java.text.MessageFormat;
 import java.util.Properties;
 
 import traindb.jdbc.Driver;
@@ -396,7 +397,7 @@ public enum TrainDBProperty
         catch (NumberFormatException nfe)
         {
             throw new TrainDBJdbcException(
-                    GT.tr("{0} parameter value must be an integer but was: {1}", new Object[] { getName(), value }),
+                    MessageFormat.format("{0} parameter value must be an integer but was: {1}", new Object[] { getName(), value }),
                     TrainDBState.INVALID_PARAMETER_VALUE,
                     nfe);
         }
@@ -422,7 +423,7 @@ public enum TrainDBProperty
         catch (NumberFormatException nfe)
         {
             throw new TrainDBJdbcException(
-                    GT.tr("{0} parameter value must be an integer but was: {1}", new Object[] { getName(), value }),
+                    MessageFormat.format("{0} parameter value must be an integer but was: {1}", new Object[] { getName(), value }),
                     TrainDBState.INVALID_PARAMETER_VALUE,
                     nfe);
         }

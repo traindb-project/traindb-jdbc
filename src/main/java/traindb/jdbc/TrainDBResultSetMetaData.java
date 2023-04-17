@@ -7,7 +7,7 @@ package traindb.jdbc;
 
 import java.sql.Connection;
 import java.sql.JDBCType;
-import traindb.jdbc.util.GT;
+import java.text.MessageFormat;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -421,7 +421,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
   protected Field getField(int columnIndex) throws SQLException {
     if (columnIndex < 1 || columnIndex > fields.length) {
       throw new TrainDBJdbcException(
-          GT.tr("The column index is out of range: {0}, number of columns: {1}.",
+          MessageFormat.format("The column index is out of range: {0}, number of columns: {1}.",
               columnIndex, fields.length),
           TrainDBState.INVALID_PARAMETER_VALUE);
     }

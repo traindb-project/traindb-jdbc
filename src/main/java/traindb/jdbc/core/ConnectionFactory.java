@@ -2,11 +2,11 @@ package traindb.jdbc.core;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.MessageFormat;
 import java.util.Properties;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBProperty;
 import traindb.jdbc.util.TrainDBState;
@@ -22,7 +22,7 @@ public abstract class ConnectionFactory {
 			return queryExecutor;
 		}
 
-		throw new TrainDBJdbcException(GT.tr("A connection could not be made using the requested protocol {0}.", protoName), TrainDBState.CONNECTION_UNABLE_TO_CONNECT);
+		throw new TrainDBJdbcException(MessageFormat.format("A connection could not be made using the requested protocol {0}.", protoName), TrainDBState.CONNECTION_UNABLE_TO_CONNECT);
 	}
 
 	public abstract QueryExecutor openConnectionImpl(String url, Properties info) throws SQLException;

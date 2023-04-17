@@ -23,7 +23,6 @@ import java.sql.Types;
 import java.util.Calendar;
 
 import traindb.jdbc.core.ParameterList;
-import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
@@ -96,13 +95,13 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 	
 	@Override
 	public ResultSet executeQuery(String sql) throws SQLException {
-		throw new TrainDBJdbcException(GT.tr("Can''t use query methods that take a query string on a PreparedStatement."), TrainDBState.WRONG_OBJECT_TYPE);
+		throw new TrainDBJdbcException("Can''t use query methods that take a query string on a PreparedStatement.", TrainDBState.WRONG_OBJECT_TYPE);
 	}
 	  
 	@Override
 	public ResultSet executeQuery() throws SQLException {
 		if (!executeWithFlags(0)) {
-			throw new TrainDBJdbcException(GT.tr("No results were returned by the query."), TrainDBState.NO_DATA);
+			throw new TrainDBJdbcException("No results were returned by the query.", TrainDBState.NO_DATA);
 	    }
 
 	    return getSingleResultSet();

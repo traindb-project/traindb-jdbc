@@ -23,6 +23,7 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.MessageFormat;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,6 @@ import traindb.jdbc.core.Field;
 import traindb.jdbc.core.ResultCursor;
 import traindb.jdbc.core.Tuple;
 import traindb.jdbc.util.ByteConverter;
-import traindb.jdbc.util.GT;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
@@ -91,7 +91,7 @@ public class TrainDBResultSet implements ResultSet {
 	    checkClosed();
 
 	    if (thisRow == null) {
-	    	throw new TrainDBJdbcException(GT.tr("ResultSet not positioned properly, perhaps you need to call next."), TrainDBState.INVALID_CURSOR_STATE);
+	    	throw new TrainDBJdbcException("ResultSet not positioned properly, perhaps you need to call next.", TrainDBState.INVALID_CURSOR_STATE);
 	    }
 
 	    checkColumnIndex(column);
@@ -113,7 +113,7 @@ public class TrainDBResultSet implements ResultSet {
 
 	private void checkColumnIndex(@Positive int column) throws SQLException {
 		if (column < 1 || column > fields.length) {
-			throw new TrainDBJdbcException(GT.tr("The column index is out of range: {0}, number of columns: {1}.", column, fields.length), TrainDBState.INVALID_PARAMETER_VALUE);
+			throw new TrainDBJdbcException(MessageFormat.format("The column index is out of range: {0}, number of columns: {1}.", column, fields.length), TrainDBState.INVALID_PARAMETER_VALUE);
 		}
 	}
 
@@ -133,7 +133,7 @@ public class TrainDBResultSet implements ResultSet {
 
 	protected void checkClosed() throws SQLException {
 		if (rows == null) {
-			throw new TrainDBJdbcException(GT.tr("This ResultSet is closed."), TrainDBState.OBJECT_NOT_IN_STATE);
+			throw new TrainDBJdbcException("This ResultSet is closed.", TrainDBState.OBJECT_NOT_IN_STATE);
 		}
 	}
 
@@ -154,7 +154,7 @@ public class TrainDBResultSet implements ResultSet {
 		checkClosed();
 
 		if (onInsertRow) {
-			throw new TrainDBJdbcException(GT.tr("Can''t use relative move methods while on the insert row."), TrainDBState.INVALID_CURSOR_STATE);
+			throw new TrainDBJdbcException("Can''t use relative move methods while on the insert row.", TrainDBState.INVALID_CURSOR_STATE);
 		}
 
 		if (currentRow + 1 >= rows.size()) {
@@ -723,7 +723,7 @@ public class TrainDBResultSet implements ResultSet {
 	    // checkScrollable();
 
 	    if (onInsertRow) {
-	    	throw new TrainDBJdbcException(GT.tr("Can''t use relative move methods while on the insert row."), TrainDBState.INVALID_CURSOR_STATE);
+	    	throw new TrainDBJdbcException("Can''t use relative move methods while on the insert row.", TrainDBState.INVALID_CURSOR_STATE);
 	    }
 
 	    // have to add 1 since absolute expects a 1-based index
@@ -740,7 +740,7 @@ public class TrainDBResultSet implements ResultSet {
 		// checkScrollable();
 
 		if (onInsertRow) {
-			throw new TrainDBJdbcException(GT.tr("Can''t use relative move methods while on the insert row."), TrainDBState.INVALID_CURSOR_STATE);
+			throw new TrainDBJdbcException("Can''t use relative move methods while on the insert row.", TrainDBState.INVALID_CURSOR_STATE);
 	    }
 
 		if (currentRow - 1 < 0) {
@@ -1563,13 +1563,13 @@ public class TrainDBResultSet implements ResultSet {
 					int lt = i.compareTo(SHORTMIN);
 
 					if (gt > 0 || lt < 0) {
-						throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "short", s),
+						throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "short", s),
 								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 					}
 					return i.shortValue();
 
 				} catch (NumberFormatException ne) {
-					throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "short", s),
+					throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "short", s),
 							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 				}
 			}
@@ -1594,13 +1594,13 @@ public class TrainDBResultSet implements ResultSet {
 					int lt = i.compareTo(INTMIN);
 
 					if (gt > 0 || lt < 0) {
-						throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "int", s),
+						throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "int", s),
 								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 					}
 					return i.intValue();
 
 				} catch (NumberFormatException ne) {
-					throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "int", s),
+					throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "int", s),
 							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 				}
 			}
@@ -1624,12 +1624,12 @@ public class TrainDBResultSet implements ResultSet {
 					int lt = i.compareTo(LONGMIN);
 
 					if (gt > 0 || lt < 0) {
-						throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "long", s),
+						throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "long", s),
 								TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 					}
 					return i.longValue();
 				} catch (NumberFormatException ne) {
-					throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "long", s),
+					throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "long", s),
 							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 				}
 			}
@@ -1643,7 +1643,7 @@ public class TrainDBResultSet implements ResultSet {
 				s = s.trim();
 				return Float.parseFloat(s);
 			} catch (NumberFormatException e) {
-				throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "float", s),
+				throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "float", s),
 						TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 			}
 		}
@@ -1656,7 +1656,7 @@ public class TrainDBResultSet implements ResultSet {
 				s = s.trim();
 				return Double.parseDouble(s);
 			} catch (NumberFormatException e) {
-				throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "double", s),
+				throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "double", s),
 						TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 			}
 		}
@@ -1688,7 +1688,7 @@ public class TrainDBResultSet implements ResultSet {
 				if (f <= LONG_MAX_FLOAT && f >= LONG_MIN_FLOAT) {
 					val = (long) f;
 				} else {
-					throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", targetType, f),
+					throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", targetType, f),
 							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 				}
 				break;
@@ -1698,7 +1698,7 @@ public class TrainDBResultSet implements ResultSet {
 				if (d <= LONG_MAX_DOUBLE && d >= LONG_MIN_DOUBLE) {
 					val = (long) d;
 				} else {
-					throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", targetType, d),
+					throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", targetType, d),
 							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 				}
 				break;
@@ -1709,7 +1709,7 @@ public class TrainDBResultSet implements ResultSet {
 				int lt = i.compareTo(LONGMIN);
 
 				if (gt > 0 || lt < 0) {
-					throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", "long", num),
+					throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", "long", num),
 							TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 				} else {
 					val = num.longValue();
@@ -1717,12 +1717,12 @@ public class TrainDBResultSet implements ResultSet {
 				break;
 			default:
 				throw new TrainDBJdbcException(
-						GT.tr("Cannot convert the column of type {0} to requested type {1}.",
+						MessageFormat.format("Cannot convert the column of type {0} to requested type {1}.",
 								type, targetType),
 						TrainDBState.DATA_TYPE_MISMATCH);
 		}
 		if (val < minVal || val > maxVal) {
-			throw new TrainDBJdbcException(GT.tr("Bad value for type {0} : {1}", targetType, val),
+			throw new TrainDBJdbcException(MessageFormat.format("Bad value for type {0} : {1}", targetType, val),
 					TrainDBState.NUMERIC_VALUE_OUT_OF_RANGE);
 		}
 		return val;
@@ -1746,7 +1746,7 @@ public class TrainDBResultSet implements ResultSet {
 			case Types.NUMERIC:
 				return ByteConverter.numeric(bytes).doubleValue();
 		}
-		throw new TrainDBJdbcException(GT.tr("Cannot convert the column of type {0} to requested type {1}.",
+		throw new TrainDBJdbcException(MessageFormat.format("Cannot convert the column of type {0} to requested type {1}.",
 				JDBCType.valueOf(type).getName(), targetType),TrainDBState.DATA_TYPE_MISMATCH);
 	}
 
