@@ -399,16 +399,16 @@ public class QueryExecutor {
 	    		}
 				*/
 	    		case 'C': // Command Complete
+					int len = stream.receiveInteger4();
+					String status = stream.receiveString(len - 5);
+					stream.receiveChar();
 	    			if (tuples != null) {
-	    				int messageSize = stream.receiveInteger4();
 	    				handler.handleResultRows(currentQuery, currentFields, tuples, null);
 	    				tuples = null;
 	    			}
-
-	    			close();
 					endQuery = true;
-
 	    			break;
+
 	    		case 'D': // Data Transfer (ongoing Execute response)
 	    			Tuple tuple = null;
 	    			try {
