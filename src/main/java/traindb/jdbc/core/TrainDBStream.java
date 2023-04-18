@@ -435,7 +435,7 @@ public class TrainDBStream implements Closeable, Flushable {
 					count = (remaining > streamBuffer.length ? streamBuffer.length : remaining);
 				}
 
-				throw new TrainDBBindException(ioe);
+				throw ioe;
 			}
 
 			send(streamBuffer, readCount);
