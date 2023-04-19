@@ -24,25 +24,22 @@ import traindb.jdbc.util.HostSpec;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
-// stream.java 참고
-// pgjdbc/pgjdbc/src/main/java/org/postgresql/core/stream.java 
+// Borrowed from pgjdbc/src/main/java/org/postgresql/core/PGStream.java
 public class TrainDBStream implements Closeable, Flushable {
-	public static final int PACKET_COMMON_STX 							= 0xa5;
-	public static final int PACKET_COMMON_ETX 							= 0x7e;
-	
 	private final SocketFactory socketFactory;
 	private final HostSpec hostSpec;
-	private Socket connection;
-	private Encoding encoding;
-	private Writer encodingWriter;
 
+	private final byte[] int4Buf;
+	private final byte[] int2Buf;
+
+	private Socket connection;
 	private VisibleBufferedInputStream input;
 	private OutputStream output;
 	private byte @Nullable [] streamBuffer;
-	
-	private final byte[] int2Buf;
-	private final byte[] int4Buf;
-	
+
+	private Encoding encoding;
+	private Writer encodingWriter;
+
 	private long maxResultBuffer = -1;
 	private long resultBufferByteCount = 0;
 	  
@@ -480,7 +477,6 @@ public class TrainDBStream implements Closeable, Flushable {
 		if (encodingWriter != null) {
 			encodingWriter.flush();
 		}
-
 		output.flush();
 	}
 

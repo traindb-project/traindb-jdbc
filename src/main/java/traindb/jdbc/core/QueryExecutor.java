@@ -103,8 +103,6 @@ public class QueryExecutor {
 
 		String nativeSql = getNativeSql(sql, parameters); // query.toString(params);
 
-		System.out.println("nativeSql : " + nativeSql);
-
 		byte[] data = nativeSql.getBytes();
 		stream.sendChar('E');
 		stream.sendInteger4(4 + data.length);
@@ -126,8 +124,6 @@ public class QueryExecutor {
 	    }
 
 	    List<Integer> bindPositions = getBindPositions(sql);
-
-	    System.out.println("nativeSql.length() : " + nativeSql.length());
 
 		int queryLength = nativeSql.length();
 		String[] params = new String[parameters.getParamCount()];
@@ -161,10 +157,6 @@ public class QueryExecutor {
 		return bindPositions;
 	}
 
-	protected void processResults(StatementResultHandler handler, int flags) throws IOException {
-		processResults(handler, flags, false);
-	}
-
 	protected void processResults(StatementResultHandler handler, int flags, boolean adaptiveFetch) throws IOException {
 	    boolean noResults = (flags & QUERY_NO_RESULTS) != 0;
 	    boolean bothRowsAndStatus = (flags & QUERY_BOTH_ROWS_AND_STATUS) != 0;
@@ -183,8 +175,6 @@ public class QueryExecutor {
 
 	    while (!endQuery) {
 	    	c = stream.receiveChar();
-
-	    	// System.out.println("Receive Type : " + c);
 
 	    	switch (c) {
 	    		/*
@@ -440,8 +430,8 @@ public class QueryExecutor {
 
 	    				LOGGER.log(Level.FINEST, " <=BE DataRow(len={0})", length);
 	    			}
-
 	    			break;
+
 	    		case 'E':
 	    			// Error Response (response to pretty much everything; backend then skips until Sync)
 	    			SQLException error = receiveErrorResponse();

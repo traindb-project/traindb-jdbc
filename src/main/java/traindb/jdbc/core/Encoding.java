@@ -80,24 +80,12 @@ public class Encoding {
 	private static final UTFEncodingProvider UTF_ENCODING_PROVIDER;
 
 	static {
-		// for java 1.8 and older, use implementation optimized for char[]
-		final JavaVersion runtimeVersion = JavaVersion.getRuntimeVersion();
-		if (JavaVersion.v1_8.compareTo(runtimeVersion) >= 0) {
-			UTF_ENCODING_PROVIDER = new UTFEncodingProvider() {
-				@Override
-				public Encoding getEncoding() {
-					return new CharOptimizedUTF8Encoder();
-				}
-			};
-		} else {
-			// for newer versions, use default java behavior
-			UTF_ENCODING_PROVIDER = new UTFEncodingProvider() {
-				@Override
-				public Encoding getEncoding() {
-					return new ByteOptimizedUTF8Encoder();
-				}
-			};
-		}
+		UTF_ENCODING_PROVIDER = new UTFEncodingProvider() {
+			@Override
+			public Encoding getEncoding() {
+										return new ByteOptimizedUTF8Encoder();
+																			  }
+		};
 	}
 
 	static final AsciiStringInterner INTERNER = new AsciiStringInterner();
