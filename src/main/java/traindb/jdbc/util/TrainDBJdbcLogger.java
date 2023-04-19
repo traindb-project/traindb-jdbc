@@ -10,7 +10,7 @@ import java.util.Date;
  * Poor man's logging infrastructure. This just deals with maintaining a per-
  * connection ID and log level, and timestamping output.
  */
-public final class TrainDBLogger {
+public final class TrainDBJdbcLogger {
     public static final int DEBUG = 2;
     public static final int INFO = 1;
     
@@ -24,11 +24,11 @@ public final class TrainDBLogger {
 
     private int level = 0;
 
-    public TrainDBLogger() {
+    public TrainDBJdbcLogger() {
         connectionIDString = "(driver) ";
     }
 
-    public TrainDBLogger(int connectionID) {
+    public TrainDBJdbcLogger(int connectionID) {
         connectionIDString = "(" + connectionID + ") ";
     }
 

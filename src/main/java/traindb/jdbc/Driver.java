@@ -20,12 +20,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import traindb.jdbc.util.TrainDBJdbcException;
-import traindb.jdbc.util.TrainDBLogger;
+import traindb.jdbc.util.TrainDBJdbcLogger;
 import traindb.jdbc.util.TrainDBProperty;
 import traindb.jdbc.util.TrainDBState;
 
 public final class Driver implements java.sql.Driver {
-	private static final TrainDBLogger logger = new TrainDBLogger();
+	private static final TrainDBJdbcLogger logger = new TrainDBJdbcLogger();
 
 	public static final int DEBUG = 2;
 	public static final int INFO = 1;
