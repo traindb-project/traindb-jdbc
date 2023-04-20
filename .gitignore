@@ -1,5 +1,27 @@
-/target/
-/.settings/
-/.classpath
-/.gitignore
-/.project
+# mac
+.DS_Store
+
+# IntelliJ
+/.idea
+*.iml
+
+# build
+/out
+target/
+jars/
+*.class
+site/
+dependency-reduced-pom.xml
+traindb-test-config.json
+
+# eclipse
+.classpath
+.project
+.settings
+
+# log
+*.log
+
+# python, pyenv
+__pycache__
+.python-version
