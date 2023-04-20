@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package traindb.jdbc.core;
 
 import java.io.IOException;
@@ -7,176 +21,175 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import traindb.jdbc.TrainDBStatement.StatementResultHandler;
 import traindb.jdbc.util.ServerErrorMessage;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
 
 public class QueryExecutor {
-	private static final Logger LOGGER = Logger.getLogger(QueryExecutor.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(QueryExecutor.class.getName());
+  int QUERY_NO_RESULTS = 4;
+  int QUERY_BOTH_ROWS_AND_STATUS = 64;
+  private TrainDBStream stream;
+  private boolean closed = false;
+  private String currentQuery = null;
+  private Field[] currentFields = null;
 
-	private TrainDBStream stream;
-	private boolean closed = false;
+  public QueryExecutor(TrainDBStream stream, Properties info) {
+    this.stream = stream;
+  }
 
-	int QUERY_NO_RESULTS = 4;
-	int QUERY_BOTH_ROWS_AND_STATUS = 64;
+  public void abort() {
+    try {
+      stream.getSocket().close();
+    } catch (IOException e) {
+      // ignore
+    }
 
-	private String currentQuery = null;
-	private Field[] currentFields = null;
+    closed = true;
+  }
 
-	public QueryExecutor(TrainDBStream stream, Properties info) {
-		this.stream = stream;
-	}
+  public void close() {
+    if (closed) {
+      return;
+    }
 
-	public void abort() {
-		try {
-			stream.getSocket().close();
-		} catch (IOException e) {
-			// ignore
-		}
+    try {
+      LOGGER.log(Level.FINEST, " FE=> Terminate");
+      sendCloseMessage();
+      stream.flush();
+      stream.close();
+    } catch (IOException ioe) {
+      LOGGER.log(Level.FINEST, "Discarding IOException on close:", ioe);
+    }
 
-		closed = true;
-	}
+    closed = true;
+  }
 
-	public void close() {
-		if (closed) {
-			return;
-		}
+  public boolean isClosed() {
+    return closed;
+  }
 
-		try {
-			LOGGER.log(Level.FINEST, " FE=> Terminate");
-			sendCloseMessage();
-			stream.flush();
-			stream.close();
-		} catch (IOException ioe) {
-			LOGGER.log(Level.FINEST, "Discarding IOException on close:", ioe);
-		}
+  public void sendCloseMessage() throws IOException {
+    // TODO Auto-generated method stub
+  }
 
-		closed = true;
-	}
+  public synchronized void execute(String sql, StatementResultHandler handler) {
+    try {
+      sendSimpleQuery(sql, handler);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
-	public boolean isClosed() {
-		return closed;
-	}
+  public synchronized void execute(String sql, ParameterList parameters,
+                                   StatementResultHandler handler) throws SQLException {
+    try {
+      sendSimpleQuery(sql, parameters, handler);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
-	public void sendCloseMessage() throws IOException {
-		// TODO Auto-generated method stub
-	}
+  private void sendSimpleQuery(String sql, StatementResultHandler handler) throws IOException {
+    LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
+    // Encoding encoding = stream.getEncoding();
 
-	public synchronized void execute(String sql, StatementResultHandler handler) {
-		try {
-			sendSimpleQuery(sql, handler);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+    byte[] data = sql.getBytes();
+    stream.sendChar('E');
+    stream.sendInteger4(4 + data.length);
+    stream.send(data);
+    stream.flush();
+    currentQuery = sql;
 
-	public synchronized void execute(String sql, ParameterList parameters, StatementResultHandler handler) throws SQLException {
-		try {
-			sendSimpleQuery(sql, parameters, handler);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+    // pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
+    // pendingDescribePortalQueue.add(query);
 
-	private void sendSimpleQuery(String sql, StatementResultHandler handler) throws IOException {
-		LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
-		// Encoding encoding = stream.getEncoding();
+    processResults(handler, 0, false);
+  }
 
-		byte[] data = sql.getBytes();
-		stream.sendChar('E');
-		stream.sendInteger4(4 + data.length);
-		stream.send(data);
-		stream.flush();
-		currentQuery = sql;
+  private void sendSimpleQuery(String sql, ParameterList parameters, StatementResultHandler handler)
+      throws IOException {
+    LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
+    // Encoding encoding = stream.getEncoding();
 
-		// pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
-		// pendingDescribePortalQueue.add(query);
+    String nativeSql = getNativeSql(sql, parameters); // query.toString(params);
 
-		processResults(handler, 0, false);
-	}
+    byte[] data = nativeSql.getBytes();
+    stream.sendChar('E');
+    stream.sendInteger4(4 + data.length);
+    stream.send(data);
+    stream.flush();
+    currentQuery = nativeSql;
 
-	private void sendSimpleQuery(String sql, ParameterList parameters, StatementResultHandler handler) throws IOException {
-		LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
-		// Encoding encoding = stream.getEncoding();
+    // pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
+    // pendingDescribePortalQueue.add(query);
 
-		String nativeSql = getNativeSql(sql, parameters); // query.toString(params);
+    processResults(handler, 0, false);
+  }
 
-		byte[] data = nativeSql.getBytes();
-		stream.sendChar('E');
-		stream.sendInteger4(4 + data.length);
-		stream.send(data);
-		stream.flush();
-		currentQuery = nativeSql;
+  public String getNativeSql(String sql, ParameterList parameters) {
+    String nativeSql = sql;
 
-		// pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
-		// pendingDescribePortalQueue.add(query);
+    if (parameters.getParamCount() == 0) {
+      return nativeSql;
+    }
 
-		processResults(handler, 0, false);
-	}
+    List<Integer> bindPositions = getBindPositions(sql);
 
-	public String getNativeSql(String sql, ParameterList parameters) {
-		String nativeSql = sql;
+    int queryLength = nativeSql.length();
+    String[] params = new String[parameters.getParamCount()];
+    for (int i = 1; i <= parameters.getParamCount(); ++i) {
+      String param = parameters == null ? "?" : parameters.toString(i, true);
+      params[i - 1] = param;
+      queryLength += param.length() - 1;
+    }
 
-	    if (parameters.getParamCount() == 0) {
-	    	return nativeSql;
-	    }
+    StringBuilder sbuf = new StringBuilder(queryLength);
+    sbuf.append(nativeSql, 0, bindPositions.get(0));
 
-	    List<Integer> bindPositions = getBindPositions(sql);
+    for (int i = 1; i <= params.length; ++i) {
+      sbuf.append(params[i - 1]);
+      int nextBind = i < params.length ? bindPositions.get(i) : nativeSql.length();
+      sbuf.append(nativeSql, bindPositions.get(i - 1) + 1, nextBind);
+    }
 
-		int queryLength = nativeSql.length();
-		String[] params = new String[parameters.getParamCount()];
-		for (int i = 1; i <= parameters.getParamCount(); ++i) {
-			String param = parameters == null ? "?" : parameters.toString(i, true);
-			params[i - 1] = param;
-			queryLength += param.length() - 1;
-		}
+    return sbuf.toString();
+  }
 
-		StringBuilder sbuf = new StringBuilder(queryLength);
-		sbuf.append(nativeSql, 0, bindPositions.get(0));
+  private List<Integer> getBindPositions(String sql) {
+    List<Integer> bindPositions = new ArrayList<Integer>();
+    int index = sql.indexOf("?");
 
-		for (int i = 1; i <= params.length; ++i) {
-			sbuf.append(params[i - 1]);
-			int nextBind = i < params.length ? bindPositions.get(i) : nativeSql.length();
-			sbuf.append(nativeSql, bindPositions.get(i - 1) + 1, nextBind);
-		}
+    while (index != -1) {
+      bindPositions.add(index);
+      index = sql.indexOf("?", index + "?".length());
+    }
 
-		return sbuf.toString();
-	}
+    return bindPositions;
+  }
 
-	private List<Integer> getBindPositions(String sql) {
-		List<Integer> bindPositions = new ArrayList<Integer> ();
-		int index = sql.indexOf("?");
+  protected void processResults(StatementResultHandler handler, int flags, boolean adaptiveFetch)
+      throws IOException {
+    boolean noResults = (flags & QUERY_NO_RESULTS) != 0;
+    boolean bothRowsAndStatus = (flags & QUERY_BOTH_ROWS_AND_STATUS) != 0;
 
-		while(index != -1) {
-			bindPositions.add(index);
-			index = sql.indexOf("?", index + "?".length());
-		}
+    List<Tuple> tuples = null;
 
-		return bindPositions;
-	}
+    int c;
+    boolean endQuery = false;
 
-	protected void processResults(StatementResultHandler handler, int flags, boolean adaptiveFetch) throws IOException {
-	    boolean noResults = (flags & QUERY_NO_RESULTS) != 0;
-	    boolean bothRowsAndStatus = (flags & QUERY_BOTH_ROWS_AND_STATUS) != 0;
+    // At the end of a command execution we have the CommandComplete
+    // message to tell us we're done, but with a describeOnly command
+    // we have no real flag to let us know we're done. We've got to
+    // look for the next RowDescription or NoData message and return
+    // from there.
+    boolean doneAfterRowDescNoData = false;
 
-	    List<Tuple> tuples = null;
+    while (!endQuery) {
+      c = stream.receiveChar();
 
-	    int c;
-	    boolean endQuery = false;
-
-	    // At the end of a command execution we have the CommandComplete
-	    // message to tell us we're done, but with a describeOnly command
-	    // we have no real flag to let us know we're done. We've got to
-	    // look for the next RowDescription or NoData message and return
-	    // from there.
-	    boolean doneAfterRowDescNoData = false;
-
-	    while (!endQuery) {
-	    	c = stream.receiveChar();
-
-	    	switch (c) {
+      switch (c) {
 	    		/*
 	    		case 'A': // Asynchronous Notify
 	    			receiveAsyncNotify();
@@ -245,7 +258,7 @@ public class QueryExecutor {
 	    			break;
 				*/
 
-	    		case 'n': // No Data (response to Describe)
+        case 'n': // No Data (response to Describe)
 	    			/*
 	    			stream.receiveInteger4(); // len, discarded
 	    			LOGGER.log(Level.FINEST, " <=BE NoData");
@@ -266,7 +279,7 @@ public class QueryExecutor {
 	    			}
 	    			*/
 
-	    			break;
+          break;
 	    			
 	    		/*
 	    		case 's': { // Portal Suspended (end of Execute)
@@ -388,56 +401,58 @@ public class QueryExecutor {
 	    			break;
 	    		}
 				*/
-	    		case 'C': // Command Complete
-					int len = stream.receiveInteger4();
-					String status = stream.receiveString(len - 5);
-					stream.receiveChar();
-	    			if (tuples != null) {
-	    				handler.handleResultRows(currentQuery, currentFields, tuples, null);
-	    				tuples = null;
-	    			}
-					endQuery = true;
-	    			break;
+        case 'C': // Command Complete
+          int len = stream.receiveInteger4();
+          String status = stream.receiveString(len - 5);
+          stream.receiveChar();
+          if (tuples != null) {
+            handler.handleResultRows(currentQuery, currentFields, tuples, null);
+            tuples = null;
+          }
+          endQuery = true;
+          break;
 
-	    		case 'D': // Data Transfer (ongoing Execute response)
-	    			Tuple tuple = null;
-	    			try {
-	    				tuple = stream.receiveTuple();
-	    			} catch (OutOfMemoryError oome) {
-	    				if (!noResults) {
-	    					handler.handleError(new TrainDBJdbcException("Ran out of memory retrieving query results.", TrainDBState.OUT_OF_MEMORY, oome));
-	    				}
-	    			} catch (SQLException e) {
-	    				handler.handleError(e);
-	    			}
+        case 'D': // Data Transfer (ongoing Execute response)
+          Tuple tuple = null;
+          try {
+            tuple = stream.receiveTuple();
+          } catch (OutOfMemoryError oome) {
+            if (!noResults) {
+              handler.handleError(
+                  new TrainDBJdbcException("Ran out of memory retrieving query results.",
+                      TrainDBState.OUT_OF_MEMORY, oome));
+            }
+          } catch (SQLException e) {
+            handler.handleError(e);
+          }
 
-	    			if (!noResults) {
-	    				if (tuples == null) {
-	    					tuples = new ArrayList<Tuple>();
-	    				}
-	    				if (tuple != null) {
-	    					tuples.add(tuple);
-	    				}
-	    			}
+          if (!noResults) {
+            if (tuples == null) {
+              tuples = new ArrayList<Tuple>();
+            }
+            if (tuple != null) {
+              tuples.add(tuple);
+            }
+          }
 
-	    			if (LOGGER.isLoggable(Level.FINEST)) {
-	    				int length;
-	    				if (tuple == null) {
-	    					length = -1;
-	    				} else {
-	    					length = tuple.length();
-	    				}
+          if (LOGGER.isLoggable(Level.FINEST)) {
+            int length;
+            if (tuple == null) {
+              length = -1;
+            } else {
+              length = tuple.length();
+            }
 
-	    				LOGGER.log(Level.FINEST, " <=BE DataRow(len={0})", length);
-	    			}
-	    			break;
+            LOGGER.log(Level.FINEST, " <=BE DataRow(len={0})", length);
+          }
+          break;
 
-	    		case 'E':
-	    			// Error Response (response to pretty much everything; backend then skips until Sync)
-	    			SQLException error = receiveErrorResponse();
-	    			handler.handleError(error);
-	    			// keep processing
-	    			break;
+        case 'E':
+          // Error Response (response to pretty much everything; backend then skips until Sync)
+          SQLException error = receiveErrorResponse();
+          handler.handleError(error);
+          // keep processing
+          break;
 
 	    		/*
 	    		case 'I': { // Empty Query (end of Execute)
@@ -469,8 +484,8 @@ public class QueryExecutor {
 	    			break;
     			*/
 
-	    		case 'T': // Row Description (response to Describe)
-	    			currentFields = receiveFields();
+        case 'T': // Row Description (response to Describe)
+          currentFields = receiveFields();
 
 					/*
 	    			tuples = new ArrayList<Tuple>();
@@ -490,7 +505,7 @@ public class QueryExecutor {
 	    				tuples = null;
 	    			}
 					 */
-	    			break;
+          break;
 
 				/*
 	    		case 'Z': // Ready For Query (eventual response to Sync)
@@ -540,53 +555,53 @@ public class QueryExecutor {
 	    			pendingExecuteQueue.clear(); // No more query executions expected.
 	    			break;
 	    		 */
-	    		default:
-	    			throw new IOException("Unexpected packet type: " + c);
-	    	}
-	    }
-	}
+        default:
+          throw new IOException("Unexpected packet type: " + c);
+      }
+    }
+  }
 
-	private Field[] receiveFields() throws IOException {
-		stream.receiveInteger4(); // MESSAGE SIZE
-		int len = stream.receiveInteger2();
-		Field[] fields = new Field[len];
+  private Field[] receiveFields() throws IOException {
+    stream.receiveInteger4(); // MESSAGE SIZE
+    int len = stream.receiveInteger2();
+    Field[] fields = new Field[len];
 
-		if (LOGGER.isLoggable(Level.FINEST)) {
-			LOGGER.log(Level.FINEST, " <=BE RowDescription({0})", len);
-		}
+    if (LOGGER.isLoggable(Level.FINEST)) {
+      LOGGER.log(Level.FINEST, " <=BE RowDescription({0})", len);
+    }
 
-		for (int i = 0; i < len; i++) {
-			String columnLabel = stream.receiveCanonicalString();
-			//int tableOid = stream.receiveInteger4();
-			//short positionInTable = (short) stream.receiveInteger2();
-			int type = stream.receiveInteger4();
-			int typeSize = stream.receiveInteger4();
-			int format = stream.receiveInteger2();
-			fields[i] = new Field(columnLabel, type, typeSize, format);
+    for (int i = 0; i < len; i++) {
+      String columnLabel = stream.receiveCanonicalString();
+      //int tableOid = stream.receiveInteger4();
+      //short positionInTable = (short) stream.receiveInteger2();
+      int type = stream.receiveInteger4();
+      int typeSize = stream.receiveInteger4();
+      int format = stream.receiveInteger2();
+      fields[i] = new Field(columnLabel, type, typeSize, format);
 
-			LOGGER.log(Level.FINEST, "        {0}", fields[i]);
-		}
+      LOGGER.log(Level.FINEST, "        {0}", fields[i]);
+    }
 
-		return fields;
-	}
+    return fields;
+  }
 
-	private SQLException receiveErrorResponse() throws IOException {
-		// it's possible to get more than one error message for a query
-		// see libpq comments wrt backend closing a connection
-		// so, append messages to a string buffer and keep processing
-		// check at the bottom to see if we need to throw an exception
+  private SQLException receiveErrorResponse() throws IOException {
+    // it's possible to get more than one error message for a query
+    // see libpq comments wrt backend closing a connection
+    // so, append messages to a string buffer and keep processing
+    // check at the bottom to see if we need to throw an exception
 
-		int elen = stream.receiveInteger4();
-		assert elen > 4 : "Error response length must be greater than 4";
+    int elen = stream.receiveInteger4();
+    assert elen > 4 : "Error response length must be greater than 4";
 
-		EncodingPredictor.DecodeResult totalMessage = stream.receiveErrorString(elen - 4);
-		ServerErrorMessage errorMsg = new ServerErrorMessage(totalMessage);
+    EncodingPredictor.DecodeResult totalMessage = stream.receiveErrorString(elen - 4);
+    ServerErrorMessage errorMsg = new ServerErrorMessage(totalMessage);
 
-		if (LOGGER.isLoggable(Level.FINEST)) {
-			LOGGER.log(Level.FINEST, " <=BE ErrorMessage({0})", errorMsg.toString());
-		}
+    if (LOGGER.isLoggable(Level.FINEST)) {
+      LOGGER.log(Level.FINEST, " <=BE ErrorMessage({0})", errorMsg.toString());
+    }
 
-		TrainDBJdbcException error = new TrainDBJdbcException(errorMsg);
-		return error;
-	}
+    TrainDBJdbcException error = new TrainDBJdbcException(errorMsg);
+    return error;
+  }
 }

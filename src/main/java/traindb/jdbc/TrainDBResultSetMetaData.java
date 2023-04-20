@@ -1,17 +1,25 @@
 /*
- * Copyright (c) 2004, PostgreSQL Global Development Group
- * See the LICENSE file in the project root for more information.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package traindb.jdbc;
 
 import java.sql.Connection;
 import java.sql.JDBCType;
-import java.text.MessageFormat;
-
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.text.MessageFormat;
 import traindb.jdbc.core.Field;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
@@ -26,7 +34,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    * Initialise for a result with a tuple set and a field descriptor set
    *
    * @param connection the connection to retrieve metadata
-   * @param fields the array of field descriptors
+   * @param fields     the array of field descriptors
    */
   public TrainDBResultSetMetaData(Connection connection, Field[] fields) {
     this.connection = connection;
@@ -45,7 +53,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2...
    * @return true if so
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public boolean isAutoIncrement(int column) throws SQLException {
     return false;
@@ -59,7 +67,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2...
    * @return true if so
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public boolean isCaseSensitive(int column) throws SQLException {
     return false;
@@ -75,7 +83,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2...
    * @return true if they can be used in a WHERE clause
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   @Override
   public boolean isSearchable(int column) throws SQLException {
@@ -90,7 +98,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2...
    * @return true if its a cash column
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   @Override
   public boolean isCurrency(int column) throws SQLException {
@@ -110,7 +118,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2...
    * @return true if so
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public boolean isSigned(int column) throws SQLException {
     Field field = getField(column);
@@ -332,7 +340,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2...
    * @return catalog name, or "" if not applicable
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public String getCatalogName(int column) throws SQLException {
     return "";
@@ -359,7 +367,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2, etc.*
    * @return true if so*
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public boolean isReadOnly(int column) throws SQLException {
     return false;
@@ -374,7 +382,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2, etc.
    * @return true if so
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public boolean isWritable(int column) throws SQLException {
     return !isReadOnly(column);
@@ -389,7 +397,7 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
    *
    * @param column the first column is 1, the second is 2, etc..
    * @return true if so
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   public boolean isDefinitelyWritable(int column) throws SQLException {
     return false;
@@ -406,17 +414,13 @@ public class TrainDBResultSetMetaData implements ResultSetMetaData {
     }
   }
 
-  // ********************************************************
-  // END OF PUBLIC INTERFACE
-  // ********************************************************
-
   /**
    * For several routines in this package, we need to convert a columnIndex into a Field[]
    * descriptor. Rather than do the same code several times, here it is.
    *
    * @param columnIndex the first column is 1, the second is 2...
    * @return the Field description
-   * @exception SQLException if a database access error occurs
+   * @throws SQLException if a database access error occurs
    */
   protected Field getField(int columnIndex) throws SQLException {
     if (columnIndex < 1 || columnIndex > fields.length) {

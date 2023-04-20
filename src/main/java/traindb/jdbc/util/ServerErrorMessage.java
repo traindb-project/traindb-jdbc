@@ -1,18 +1,26 @@
 /*
- * Copyright (c) 2004, PostgreSQL Global Development Group
- * See the LICENSE file in the project root for more information.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package traindb.jdbc.util;
 
-import java.text.MessageFormat;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.Serializable;
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import traindb.jdbc.core.EncodingPredictor;
 
 public class ServerErrorMessage implements Serializable {
@@ -42,7 +50,8 @@ public class ServerErrorMessage implements Serializable {
     this(serverError.result);
     if (serverError.encoding != null) {
       mesgParts.put(MESSAGE, mesgParts.get(MESSAGE)
-          + MessageFormat.format(" (pgjdbc: autodetected server-encoding to be {0}, if the message is not readable, please check database logs and/or host, port, dbname, user, password, pg_hba.conf)",
+          + MessageFormat.format(
+          " (pgjdbc: autodetected server-encoding to be {0}, if the message is not readable, please check database logs and/or host, port, dbname, user, password, pg_hba.conf)",
           serverError.encoding)
       );
     }
@@ -205,19 +214,22 @@ public class ServerErrorMessage implements Serializable {
     if (LOGGER.isLoggable(Level.FINEST)) {
       String internalQuery = mesgParts.get(INTERNAL_QUERY);
       if (internalQuery != null) {
-        totalMessage.append("\n  ").append(MessageFormat.format("Internal Query: {0}", internalQuery));
+        totalMessage.append("\n  ")
+            .append(MessageFormat.format("Internal Query: {0}", internalQuery));
       }
       String internalPosition = mesgParts.get(INTERNAL_POSITION);
       if (internalPosition != null) {
-        totalMessage.append("\n  ").append(MessageFormat.format("Internal Position: {0}", internalPosition));
+        totalMessage.append("\n  ")
+            .append(MessageFormat.format("Internal Position: {0}", internalPosition));
       }
 
       String file = mesgParts.get(FILE);
       String line = mesgParts.get(LINE);
       String routine = mesgParts.get(ROUTINE);
       if (file != null || line != null || routine != null) {
-        totalMessage.append("\n  ").append(MessageFormat.format("Location: File: {0}, Routine: {1}, Line: {2}",
-            file, routine, line));
+        totalMessage.append("\n  ")
+            .append(MessageFormat.format("Location: File: {0}, Routine: {1}, Line: {2}",
+                file, routine, line));
       }
       message = mesgParts.get(SQLSTATE);
       if (message != null) {

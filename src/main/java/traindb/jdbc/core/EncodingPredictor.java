@@ -1,13 +1,21 @@
 /*
- * Copyright (c) 2003, PostgreSQL Global Development Group
- * See the LICENSE file in the project root for more information.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package traindb.jdbc.core;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.IOException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * <p>Predicts encoding for error messages based on some heuristics.</p>
@@ -19,43 +27,13 @@ import java.io.IOException;
  * </ol>
  */
 public class EncodingPredictor {
-  /**
-   * In certain cases the encoding is not known for sure (e.g. before authentication).
-   * In such cases, backend might send messages in "native to database" encoding,
-   * thus pgjdbc has to guess the encoding nad
-   */
-  public static class DecodeResult {
-    public final String result;
-    public final @Nullable String encoding; // JVM name
-
-    DecodeResult(String result, @Nullable String encoding) {
-      this.result = result;
-      this.encoding = encoding;
-    }
-  }
-
-  static class Translation {
-    public final @Nullable String fatalText;
-    private final String @Nullable [] texts;
-    public final String language;
-    public final String[] encodings;
-
-    Translation(@Nullable String fatalText, String @Nullable [] texts,
-        String language, String... encodings) {
-      this.fatalText = fatalText;
-      this.texts = texts;
-      this.language = language;
-      this.encodings = encodings;
-    }
-  }
-
   private static final Translation[] FATAL_TRANSLATIONS =
-      new Translation[]{
+      new Translation[] {
           new Translation("ВАЖНО", null, "ru", "WIN", "ALT", "KOI8"),
           new Translation("致命错误", null, "zh_CN", "EUC_CN", "GBK", "BIG5"),
           new Translation("KATASTROFALNY", null, "pl", "LATIN2"),
           new Translation("FATALE", null, "it", "LATIN1", "LATIN9"),
-          new Translation("FATAL", new String[]{"は存在しません" /* ~ does not exist */,
+          new Translation("FATAL", new String[] {"は存在しません" /* ~ does not exist */,
               "ロール" /* ~ role */, "ユーザ" /* ~ user */}, "ja", "EUC_JP", "SJIS"),
           new Translation(null, null, "fr/de/es/pt_BR", "LATIN1", "LATIN3", "LATIN4", "LATIN5",
               "LATIN7", "LATIN9"),
@@ -145,5 +123,35 @@ public class EncodingPredictor {
       }
     }
     return false;
+  }
+
+  /**
+   * In certain cases the encoding is not known for sure (e.g. before authentication).
+   * In such cases, backend might send messages in "native to database" encoding,
+   * thus pgjdbc has to guess the encoding nad
+   */
+  public static class DecodeResult {
+    public final String result;
+    public final @Nullable String encoding; // JVM name
+
+    DecodeResult(String result, @Nullable String encoding) {
+      this.result = result;
+      this.encoding = encoding;
+    }
+  }
+
+  static class Translation {
+    public final @Nullable String fatalText;
+    public final String language;
+    public final String[] encodings;
+    private final String @Nullable [] texts;
+
+    Translation(@Nullable String fatalText, String @Nullable [] texts,
+                String language, String... encodings) {
+      this.fatalText = fatalText;
+      this.texts = texts;
+      this.language = language;
+      this.encodings = encodings;
+    }
   }
 }

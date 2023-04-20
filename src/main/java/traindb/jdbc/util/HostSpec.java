@@ -1,100 +1,114 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package traindb.jdbc.util;
 
 import static java.util.regex.Pattern.compile;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class HostSpec {
-	public static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]|0.0.0.0|[::0]";
+  public static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]|0.0.0.0|[::0]";
 
-	protected final @Nullable String localSocketAddress;
-	protected final String host;
-	protected final int port;
+  protected final @Nullable String localSocketAddress;
+  protected final String host;
+  protected final int port;
 
-	public HostSpec(String host, int port) {
-		this(host, port, null);
-	}
+  public HostSpec(String host, int port) {
+    this(host, port, null);
+  }
 
-	public HostSpec(String host, int port, @Nullable String localSocketAddress) {
-		this.host = host;
-		this.port = port;
-		this.localSocketAddress = localSocketAddress;
-	}
+  public HostSpec(String host, int port, @Nullable String localSocketAddress) {
+    this.host = host;
+    this.port = port;
+    this.localSocketAddress = localSocketAddress;
+  }
 
-	public String getHost() {
-		return host;
-	}
+  public String getHost() {
+    return host;
+  }
 
-	public int getPort() {
-		return port;
-	}
+  public int getPort() {
+    return port;
+  }
 
-	public String toString() {
-		return host + ":" + port;
-	}
+  public String toString() {
+    return host + ":" + port;
+  }
 
-	public @Nullable String getLocalSocketAddress() {
-		return localSocketAddress;
-	}
+  public @Nullable String getLocalSocketAddress() {
+    return localSocketAddress;
+  }
 
-	public Boolean shouldResolve() {
-		String socksProxy = System.getProperty("socksProxyHost");
-		if (socksProxy == null || socksProxy.trim().isEmpty()) {
-			return true;
-		}
-		return matchesNonProxyHosts();
-	}
+  public Boolean shouldResolve() {
+    String socksProxy = System.getProperty("socksProxyHost");
+    if (socksProxy == null || socksProxy.trim().isEmpty()) {
+      return true;
+    }
+    return matchesNonProxyHosts();
+  }
 
-	private Boolean matchesNonProxyHosts() {
-		String nonProxyHosts = System.getProperty("socksNonProxyHosts", DEFAULT_NON_PROXY_HOSTS);
-		if (nonProxyHosts == null || this.host.isEmpty()) {
-			return false;
-		}
+  private Boolean matchesNonProxyHosts() {
+    String nonProxyHosts = System.getProperty("socksNonProxyHosts", DEFAULT_NON_PROXY_HOSTS);
+    if (nonProxyHosts == null || this.host.isEmpty()) {
+      return false;
+    }
 
-		Pattern pattern = toPattern(nonProxyHosts);
-		Matcher matcher = pattern == null ? null : pattern.matcher(this.host);
-		return matcher != null && matcher.matches();
-	}
+    Pattern pattern = toPattern(nonProxyHosts);
+    Matcher matcher = pattern == null ? null : pattern.matcher(this.host);
+    return matcher != null && matcher.matches();
+  }
 
-	@SuppressWarnings("regex")
-	private @Nullable Pattern toPattern(String mask) {
-		StringBuilder joiner = new StringBuilder();
-		String separator = "";
-		for (String disjunct : mask.split("\\|")) {
-			if (!disjunct.isEmpty()) {
-				String regex = disjunctToRegex(disjunct.toLowerCase());
-				joiner.append(separator).append(regex);
-				separator = "|";
-			}
-		}
+  @SuppressWarnings("regex")
+  private @Nullable Pattern toPattern(String mask) {
+    StringBuilder joiner = new StringBuilder();
+    String separator = "";
+    for (String disjunct : mask.split("\\|")) {
+      if (!disjunct.isEmpty()) {
+        String regex = disjunctToRegex(disjunct.toLowerCase());
+        joiner.append(separator).append(regex);
+        separator = "|";
+      }
+    }
 
-		return joiner.length() == 0 ? null : compile(joiner.toString());
-	}
+    return joiner.length() == 0 ? null : compile(joiner.toString());
+  }
 
-	private String disjunctToRegex(String disjunct) {
-		String regex;
+  private String disjunctToRegex(String disjunct) {
+    String regex;
 
-		if (disjunct.startsWith("*")) {
-			regex = ".*" + Pattern.quote(disjunct.substring(1));
-		} else if (disjunct.endsWith("*")) {
-			regex = Pattern.quote(disjunct.substring(0, disjunct.length() - 1)) + ".*";
-		} else {
-			regex = Pattern.quote(disjunct);
-		}
+    if (disjunct.startsWith("*")) {
+      regex = ".*" + Pattern.quote(disjunct.substring(1));
+    } else if (disjunct.endsWith("*")) {
+      regex = Pattern.quote(disjunct.substring(0, disjunct.length() - 1)) + ".*";
+    } else {
+      regex = Pattern.quote(disjunct);
+    }
 
-		return regex;
-	}
+    return regex;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		return obj instanceof HostSpec && port == ((HostSpec) obj).port && host.equals(((HostSpec) obj).host);
-	}
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof HostSpec && port == ((HostSpec) obj).port &&
+        host.equals(((HostSpec) obj).host);
+  }
 
-	@Override
-	public int hashCode() {
-		return port ^ host.hashCode();
-	}
+  @Override
+  public int hashCode() {
+    return port ^ host.hashCode();
+  }
 }
