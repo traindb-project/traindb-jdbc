@@ -76,7 +76,7 @@ public class QueryExecutor {
 
   public synchronized void execute(String sql, StatementResultHandler handler) {
     try {
-      sendSimpleQuery(sql, handler);
+      sendSimpleQuery(sql, null, handler);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -91,9 +91,14 @@ public class QueryExecutor {
     }
   }
 
-  private void sendSimpleQuery(String sql, StatementResultHandler handler) throws IOException {
+  private void sendSimpleQuery(String sql, ParameterList parameters, StatementResultHandler handler)
+      throws IOException {
     LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
     // Encoding encoding = stream.getEncoding();
+
+    if (parameters != null) {
+      sql = getNativeSql(sql, parameters);
+    }
 
     byte[] data = sql.getBytes();
     stream.sendChar('E');
@@ -101,29 +106,6 @@ public class QueryExecutor {
     stream.send(data);
     stream.flush();
     currentQuery = sql;
-
-    // pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
-    // pendingDescribePortalQueue.add(query);
-
-    processResults(handler, 0, false);
-  }
-
-  private void sendSimpleQuery(String sql, ParameterList parameters, StatementResultHandler handler)
-      throws IOException {
-    LOGGER.log(Level.FINEST, " FE=> SimpleQuery(query=\"{0}\")", sql);
-    // Encoding encoding = stream.getEncoding();
-
-    String nativeSql = getNativeSql(sql, parameters); // query.toString(params);
-
-    byte[] data = nativeSql.getBytes();
-    stream.sendChar('E');
-    stream.sendInteger4(4 + data.length);
-    stream.send(data);
-    stream.flush();
-    currentQuery = nativeSql;
-
-    // pendingExecuteQueue.add(new ExecuteRequest(query, null, true));
-    // pendingDescribePortalQueue.add(query);
 
     processResults(handler, 0, false);
   }
