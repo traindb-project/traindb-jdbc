@@ -539,5 +539,12 @@ public class TrainDBStatement implements Statement {
       castNonNull(lastException).setNextException(error);
       this.lastException = error;
     }
+
+    public void handleCompletion() throws SQLException {
+      SQLException firstException = this.firstException;
+      if (firstException != null) {
+        throw firstException;
+      }
+    }
   }
 }

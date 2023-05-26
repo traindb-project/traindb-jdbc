@@ -74,9 +74,10 @@ public class QueryExecutor {
     // TODO Auto-generated method stub
   }
 
-  public synchronized void execute(String sql, StatementResultHandler handler) {
+  public synchronized void execute(String sql, StatementResultHandler handler) throws SQLException {
     try {
       sendSimpleQuery(sql, null, handler);
+      handler.handleCompletion();
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -86,6 +87,7 @@ public class QueryExecutor {
                                    StatementResultHandler handler) throws SQLException {
     try {
       sendSimpleQuery(sql, parameters, handler);
+      handler.handleCompletion();
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -429,11 +431,10 @@ public class QueryExecutor {
           }
           break;
 
-        case 'E':
-          // Error Response (response to pretty much everything; backend then skips until Sync)
+        case 'E': // Error Response
           SQLException error = receiveErrorResponse();
           handler.handleError(error);
-          // keep processing
+          endQuery = true;
           break;
 
 	    		/*
