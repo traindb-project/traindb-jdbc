@@ -242,27 +242,12 @@ public class QueryExecutor {
 	    			break;
 				*/
 
-        case 'n': // No Data (response to Describe)
-	    			/*
-	    			stream.receiveInteger4(); // len, discarded
-	    			LOGGER.log(Level.FINEST, " <=BE NoData");
-
-	    			pendingDescribePortalQueue.removeFirst();
-
-	    			if (doneAfterRowDescNoData) {
-	    				DescribeRequest describeData = pendingDescribeStatementQueue.removeFirst();
-	    				SimpleQuery currentQuery = describeData.query;
-
-	    				Field[] fields = currentQuery.getFields();
-
-	    				if (fields != null) { // There was a resultset.
-	    					tuples = new ArrayList<Tuple>();
-	    					handler.handleResultRows(currentQuery, fields, tuples, null);
-	    					tuples = null;
-	    				}
-	    			}
-	    			*/
-
+        case 'n': // No Data
+          stream.receiveInteger4(); // len, discarded
+          LOGGER.log(Level.FINEST, " <=BE NoData");
+          if (tuples == null) {
+            tuples = new ArrayList<Tuple>();
+          }
           break;
 	    			
 	    		/*
