@@ -121,55 +121,42 @@ public final class Driver implements java.sql.Driver {
 
     urlServer = urlServer.substring(TRAINDB_PROTOCOL.length());
 
-    if (urlServer.startsWith("//")) { // FIXME: Environment variables
+    if (urlServer.startsWith("//")) { // if url starts with "jdbc:traindb://"
       urlServer = urlServer.substring(2);
       int slashIdx = urlServer.indexOf('/');
       if (slashIdx > -1) {
         urlServer = urlServer.substring(0, slashIdx);
       }
 
-      StringBuilder hosts = new StringBuilder();
-      StringBuilder ports = new StringBuilder();
-      String[] addrs = urlServer.split(",");
-      for (String addr : addrs) {
-        addr = addr.trim();
-
-        String host;
-        String port;
-
-        int portIdx = addr.lastIndexOf(':');
-        if (portIdx > -1 && addr.lastIndexOf(']') < portIdx) {
-          host = addr.substring(0, portIdx);
-          port = addr.substring(portIdx + 1);
-          if (port.isEmpty()) {
-            port = DEFAULT_TRAINDB_PORT;
-          } else {
-            try {
-              Integer.parseInt(port);
-            } catch (NumberFormatException e) {
-              return null;
-            }
-          }
-        } else {
-          host = addr;
+      String host;
+      String port;
+      String addr = urlServer.trim();
+      int portIdx = addr.lastIndexOf(':');
+      if (portIdx > -1 && addr.lastIndexOf(']') < portIdx) {
+        host = addr.substring(0, portIdx);
+        port = addr.substring(portIdx + 1);
+        if (port.isEmpty()) {
           port = DEFAULT_TRAINDB_PORT;
+        } else {
+          try {
+            Integer.parseInt(port);
+          } catch (NumberFormatException e) {
+            return null;
+          }
         }
-
-        if (host.isEmpty()) {
-          host = "localhost";
-        }
-
-        hosts.append(host).append(',');
-        ports.append(port).append(',');
+      } else {
+        host = addr;
+        port = DEFAULT_TRAINDB_PORT;
       }
 
-      hosts.setLength(hosts.length() - 1);
-      ports.setLength(hosts.length() - 1);
+      if (host.isEmpty()) {
+        host = "localhost";
+      }
 
-      urlProps.setProperty("server.host", hosts.toString());
-      urlProps.setProperty("server.port", ports.toString());
+      urlProps.setProperty("server.host", host);
+      urlProps.setProperty("server.port", port);
       /* urlProps.setProperty("TrainDBNAME", "<unknown>"); */
-    } else {
+    } else { // if url starts with "jdbc:traindb:<dbms>//"
       urlProps.setProperty("server.host", "localhost");
       urlProps.setProperty("server.port", DEFAULT_TRAINDB_PORT);
       /* urlProps.setProperty("TrainDBNAME", "<unknown>"); */
@@ -224,14 +211,11 @@ public final class Driver implements java.sql.Driver {
 
   @Override
   public Connection connect(String url, Properties info) throws SQLException {
-    logger.debug("Call Connect : " + url);
-
-    Properties defaults;
-
-    if (!url.startsWith(TRAINDB_PROTOCOL)) {
+    if (!acceptsURL(url)) {
       return null;
     }
 
+    Properties defaults;
     try {
       defaults = getDefaultProperties();
     } catch (IOException ioe) {
@@ -241,7 +225,6 @@ public final class Driver implements java.sql.Driver {
 
     // override defaults with provided properties
     Properties props = new Properties(defaults);
-
     if (info != null) {
       Enumeration<?> e = info.propertyNames();
       while (e.hasMoreElements()) {
@@ -252,25 +235,20 @@ public final class Driver implements java.sql.Driver {
               "Properties for the driver contains a non-string value for the key " + propName,
               TrainDBState.UNEXPECTED_ERROR);
         }
-
         props.setProperty(propName, propValue);
       }
     }
 
     // parse URL and add more properties
-		/*
-		props = parseURL(url, props);
-		if (props == null) {
-			logger.debug("Error in url: " + url);
-			return null;
-		}
-		*/
+    props = parseURL(url, props);
+    if (props == null) {
+      logger.debug("Error in url: " + url);
+      return null;
+    }
 
     try {
       logger.debug("Connecting with URL: " + url);
-
       long timeout = timeout(props);
-
       if (timeout <= 0) {
         return makeConnection(url, props);
       }
@@ -297,7 +275,7 @@ public final class Driver implements java.sql.Driver {
 
   @Override
   public boolean acceptsURL(String url) throws SQLException {
-    return parseURL(url, null) != null;
+    return url.startsWith(TRAINDB_PROTOCOL);
   }
 
   @Override

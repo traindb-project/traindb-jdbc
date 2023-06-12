@@ -130,7 +130,7 @@ public class ConnectionFactoryImpl extends ConnectionFactory {
     List<String[]> paramList = new ArrayList<String[]>();
     paramList.add(new String[] {"url", url});
     paramList.add(new String[] {"user", info.getProperty("user")});
-    paramList.add(new String[] {"password", info.getProperty("password")});
+    paramList.add(new String[] {"password", info.getProperty("password", "")});
 
     sendStartupPacket(newStream, paramList);
 
