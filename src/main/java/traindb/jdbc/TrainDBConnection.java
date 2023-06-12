@@ -176,8 +176,7 @@ public class TrainDBConnection implements Connection {
 
   @Override
   public DatabaseMetaData getMetaData() throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return new TrainDBDatabaseMetaData(this);
   }
 
   @Override
