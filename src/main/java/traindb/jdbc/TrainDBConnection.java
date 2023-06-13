@@ -41,16 +41,20 @@ import traindb.jdbc.util.TrainDBState;
 public class TrainDBConnection implements Connection {
   private final Properties clientInfo;
 
-  private final String creatingURL;
+  private final String url;
 
   private final QueryExecutor queryExecutor;
 
   TrainDBConnection(String url, Properties info) throws SQLException {
-    this.creatingURL = url;
+    this.url = url;
 
     this.queryExecutor = ConnectionFactory.openConnection(url, info);
 
     this.clientInfo = new Properties();
+  }
+
+  public String getUrl() {
+    return url;
   }
 
   public QueryExecutor getQueryExecutor() {
