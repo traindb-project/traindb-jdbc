@@ -450,8 +450,11 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public byte[] getBytes(int columnIndex) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    byte[] value = getRawValue(columnIndex);
+    if (value == null) {
+      return null;
+    }
+    return value;
   }
 
   @Override
