@@ -17,6 +17,8 @@ package traindb.jdbc.core;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.text.MessageFormat;
+import org.apache.commons.codec.binary.Hex;
+import traindb.jdbc.util.ByteArray;
 import traindb.jdbc.util.ByteConverter;
 import traindb.jdbc.util.TrainDBJdbcException;
 import traindb.jdbc.util.TrainDBState;
@@ -138,21 +140,10 @@ public class ParameterList {
           }
           return n.toString();
 
-			/*
-			case Oid.UUID:
-				String uuid = new UUIDArrayAssistant().buildElement((byte[]) paramValue, 0, 16).toString();
-				return "'" + uuid + "'::uuid";
-
-			case Oid.POINT:
-				PGpoint pgPoint = new PGpoint();
-				pgPoint.setByteValue((byte[]) paramValue, 0);
-				return "'" + pgPoint.toString() + "'::point";
-
-			case Oid.BOX:
-				PGbox pgBox = new PGbox();
-				pgBox.setByteValue((byte[]) paramValue, 0);
-				return "'" + pgBox.toString() + "'::box";
-			*/
+        case Types.BINARY:
+        case Types.VARBINARY:
+          byte[] bytes = ((ByteArray) paramValue).getArray();
+          return "x'" + Hex.encodeHexString(bytes) + "'";
       }
 
       return "?";
@@ -199,5 +190,9 @@ public class ParameterList {
       }
       return p.toString();
     }
+  }
+
+  public void setBytea(int index, byte[] data, int offset, int length) throws SQLException {
+    bind(index, new ByteArray(data, offset, length), Types.VARBINARY, BINARY);
   }
 }

@@ -241,8 +241,15 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 
   @Override
   public void setBytes(int parameterIndex, byte[] x) throws SQLException {
-    // TODO Auto-generated method stub
+    checkClosed();
 
+    if (null == x) {
+      setNull(parameterIndex, Types.VARBINARY);
+      return;
+    }
+    byte[] copy = new byte[x.length];
+    System.arraycopy(x, 0, copy, 0, x.length);
+    preparedParameters.setBytea(parameterIndex, copy, 0, x.length);
   }
 
   @Override
@@ -295,8 +302,53 @@ public class TrainDBPreparedStatement extends TrainDBStatement implements Prepar
 
   @Override
   public void setObject(int parameterIndex, Object x) throws SQLException {
-    // TODO Auto-generated method stub
+    checkClosed();
 
+    if (x == null) {
+      setNull(parameterIndex, Types.OTHER);
+    } else if (x instanceof SQLXML) {
+      setSQLXML(parameterIndex, (SQLXML) x);
+    } else if (x instanceof String) {
+      setString(parameterIndex, (String) x);
+    } else if (x instanceof BigDecimal) {
+      setBigDecimal(parameterIndex, (BigDecimal) x);
+    } else if (x instanceof Short) {
+      setShort(parameterIndex, (Short) x);
+    } else if (x instanceof Integer) {
+      setInt(parameterIndex, (Integer) x);
+    } else if (x instanceof Long) {
+      setLong(parameterIndex, (Long) x);
+    } else if (x instanceof Float) {
+      setFloat(parameterIndex, (Float) x);
+    } else if (x instanceof Double) {
+      setDouble(parameterIndex, (Double) x);
+    } else if (x instanceof byte[] || x instanceof Byte[]) {
+      setBytes(parameterIndex, (byte[]) x);
+    } else if (x instanceof java.sql.Date) {
+      setDate(parameterIndex, (java.sql.Date) x);
+    } else if (x instanceof Time) {
+      setTime(parameterIndex, (Time) x);
+    } else if (x instanceof Timestamp) {
+      setTimestamp(parameterIndex, (Timestamp) x);
+    } else if (x instanceof Boolean) {
+      setBoolean(parameterIndex, (Boolean) x);
+    } else if (x instanceof Byte) {
+      setByte(parameterIndex, (Byte) x);
+    } else if (x instanceof Blob) {
+      setBlob(parameterIndex, (Blob) x);
+    } else if (x instanceof Clob) {
+      setClob(parameterIndex, (Clob) x);
+    } else if (x instanceof Array) {
+      setArray(parameterIndex, (Array) x);
+    } else if (x instanceof Character) {
+      setString(parameterIndex, ((Character) x).toString());
+    } else {
+      // Can't infer a type.
+      throw new TrainDBJdbcException(
+          "Can''t infer the SQL type to use for an instance of " + x.getClass().getName() + ". "
+              + "Use setObject() with an explicit Types value to specify the type to use.",
+          TrainDBState.INVALID_PARAMETER_TYPE);
+    }
   }
 
   @Override
