@@ -1320,8 +1320,8 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    Timestamp ts = Timestamp.valueOf(getString(columnIndex));
+    return Timestamp.valueOf(getString(columnIndex));
   }
 
   @Override
