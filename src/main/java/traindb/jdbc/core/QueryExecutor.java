@@ -452,27 +452,8 @@ public class QueryExecutor {
 	    			break;
     			*/
 
-        case 'T': // Row Description (response to Describe)
+        case 'T': // Row Description
           currentFields = receiveFields();
-
-					/*
-	    			tuples = new ArrayList<Tuple>();
-
-	    			SimpleQuery query = castNonNull(pendingDescribePortalQueue.peekFirst());
-	    			if (!pendingExecuteQueue.isEmpty() && !castNonNull(pendingExecuteQueue.peekFirst()).asSimple) {
-	    				pendingDescribePortalQueue.removeFirst();
-	    			}
-	    			query.setFields(fields);
-
-	    			if (doneAfterRowDescNoData) {
-	    				DescribeRequest describeData = pendingDescribeStatementQueue.removeFirst();
-	    				SimpleQuery currentQuery = describeData.query;
-	    				currentQuery.setFields(fields);
-
-	    				handler.handleResultRows(currentQuery, fields, tuples, null);
-	    				tuples = null;
-	    			}
-					 */
           break;
 
 				/*
