@@ -471,8 +471,7 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public Timestamp getTimestamp(int columnIndex) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return getTimestamp(columnIndex, null);
   }
 
   @Override
