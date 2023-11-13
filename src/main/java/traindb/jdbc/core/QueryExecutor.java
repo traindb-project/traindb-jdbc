@@ -153,6 +153,28 @@ public class QueryExecutor {
     return bindPositions;
   }
 
+  public void getMoreResult(StatementResultHandler handler) 
+  		throws SQLException{
+	try {
+		sendMoreResult(handler);
+		handler.handleCompletion();
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+  }
+
+  private void sendMoreResult(StatementResultHandler handler)
+  	throws IOException {
+	LOGGER.log(Level.FINEST, " FE=> getMoreResults()");
+	System.out.println(" FE=> getMoreResults()");
+
+	stream.sendChar('M');
+	stream.flush();
+
+	processResults(handler,0,false);
+  }
+
   protected void processResults(StatementResultHandler handler, int flags, boolean adaptiveFetch)
       throws IOException {
     boolean noResults = (flags & QUERY_NO_RESULTS) != 0;

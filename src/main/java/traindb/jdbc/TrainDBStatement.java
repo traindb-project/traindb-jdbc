@@ -348,7 +348,37 @@ public class TrainDBStatement implements Statement {
   @Override
   public boolean getMoreResults() throws SQLException {
     // TODO Auto-generated method stub
-    return false;
+    synchronized (this) {
+      checkClosed();
+
+      // send request another result set to server
+      
+    StatementResultHandler handler = new StatementResultHandler();
+
+    synchronized (this) {
+      result = null;
+    }
+
+    try {
+      startTimer();
+      System.out.println("==> getMoreResult Start");
+      connection.getQueryExecutor().getMoreResult(handler);
+      System.out.println("==> getMoreResult End");
+      // connection.getQueryExecutor().execute(queryToExecute, handler, maxrows, fetchSize, flags, adaptiveFetch);
+    } finally {
+      killTimerTask();
+    }
+
+    synchronized (this) {
+      checkClosed();
+
+      ResultWrapper currentResult = handler.getResults();
+
+      result = currentResult;
+    }
+
+      return false;
+    }
   }
 
   @Override
@@ -457,7 +487,7 @@ public class TrainDBStatement implements Statement {
   }
 
   @Override
-  public int getResultSetHoldability() throws SQLException {
+  public int getResultSetHoldability() throws SQLException {2
     // TODO Auto-generated method stub
     return 0;
   }
