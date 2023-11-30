@@ -154,25 +154,29 @@ public class QueryExecutor {
   }
 
   public void getMoreResult(StatementResultHandler handler) 
-  		throws SQLException{
-	try {
-		sendMoreResult(handler);
-		handler.handleCompletion();
-	} catch (IOException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
+        throws SQLException{
+    try {
+        sendMoreResult(handler);
+        handler.handleCompletion();
+    } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+    }
   }
 
   private void sendMoreResult(StatementResultHandler handler)
-  	throws IOException {
-	LOGGER.log(Level.FINEST, " FE=> getMoreResults()");
-	System.out.println(" FE=> getMoreResults()");
+    throws IOException {
+    LOGGER.log(Level.FINEST, " FE=> getMoreResults()");
+    System.out.println(" FE=> getMoreResults()");
 
-	stream.sendChar('M');
-	stream.flush();
+    String sql = "incremental rows";
+    byte[] data = sql.getBytes();
+    stream.sendChar('E');
+    stream.sendInteger4(4 + data.length);
+    stream.send(data);
+    stream.flush();
 
-	processResults(handler,0,false);
+    processResults(handler,0,false);
   }
 
   protected void processResults(StatementResultHandler handler, int flags, boolean adaptiveFetch)

@@ -487,7 +487,7 @@ public class TrainDBStatement implements Statement {
   }
 
   @Override
-  public int getResultSetHoldability() throws SQLException {2
+  public int getResultSetHoldability() throws SQLException {
     // TODO Auto-generated method stub
     return 0;
   }
