@@ -373,8 +373,11 @@ public class TrainDBStatement implements Statement {
       ResultWrapper currentResult = handler.getResults();
 
       result = currentResult;
-      
-      return (result != null && result.getResultSet() != null);
+    }
+
+    synchronized (this) {
+      checkClosed();
+      return (result != null && result.getResultSet() != null && result.getResultSet().getRow() > 0);
     }
   }
 
