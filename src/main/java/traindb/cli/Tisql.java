@@ -251,7 +251,7 @@ public class Tisql {
                         else
                             System.out.println("SQL Execute Success");
                     }
-                    if (isMoreResult == false || stmt.getMoreResults() == false)
+                    if (isMoreResult == false || ( result = stmt.getMoreResults()) == false)
                         break;
                 }
             }

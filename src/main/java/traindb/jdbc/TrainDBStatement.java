@@ -348,11 +348,9 @@ public class TrainDBStatement implements Statement {
   @Override
   public boolean getMoreResults() throws SQLException {
     // TODO Auto-generated method stub
-    synchronized (this) {
-      checkClosed();
+    checkClosed();
 
-      // send request another result set to server
-      
+    // send request another result set to server
     StatementResultHandler handler = new StatementResultHandler();
 
     synchronized (this) {
@@ -375,9 +373,8 @@ public class TrainDBStatement implements Statement {
       ResultWrapper currentResult = handler.getResults();
 
       result = currentResult;
-    }
-
-      return false;
+      
+      return (result != null && result.getResultSet() != null);
     }
   }
 
