@@ -377,6 +377,7 @@ public class TrainDBStatement implements Statement {
 
     synchronized (this) {
       checkClosed();
+      System.out.println("==> getMoreResult getRow : " + result.getResultSet().getRow());
       return (result != null && result.getResultSet() != null && result.getResultSet().getRow() > 0);
     }
   }
