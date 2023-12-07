@@ -14,11 +14,11 @@ public class Tisql {
 
     public Tisql() {
         scanner = new Scanner(System.in);
-	try { 
+        try {
             Class.forName(DRIVER);
-	} catch ( Exception e ) {
-	    e.printStackTrace();
-	}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void printHelp() {
@@ -86,17 +86,17 @@ public class Tisql {
                 } else {
                     if (rs != null && !rs.isClosed()) {
                         rs.close();
-			rs = null;
+                        rs = null;
                     }
                     if (stmt != null && !stmt.isClosed()) {
                         stmt.close();
-			stmt = null;
+                        stmt = null;
                     }
                     if (conn != null && !conn.isClosed()) {
                         conn.close();
-			conn = null;
+                        conn = null;
                     }
-		    isConnected = false;
+                    isConnected = false;
                     System.out.println("Disconnected from database");
                 }
                 break;
@@ -186,6 +186,9 @@ public class Tisql {
                     case Types.DOUBLE:
                         output = String.format("%-" + columnWidth[i - 1] + "f", rs.getDouble(i));
                         break;
+                    case Types.BIGINT:
+                        output = String.format("%-" + columnWidth[i - 1] + "d", rs.getLong(i));
+                        break;
                     case Types.BIT:
                     case Types.CLOB:
                     case Types.BLOB:
@@ -211,11 +214,11 @@ public class Tisql {
             while (true) {
                 // Prompt user for query
                 System.out.print("Enter query : ");
-		String query = "";
-	        query = scanner.nextLine();
-		if (query.endsWith(";")) {
-                    query = query.substring(0, query.length()-1);
-		}
+                String query = "";
+                query = scanner.nextLine();
+                if (query.endsWith(";")) {
+                    query = query.substring(0, query.length() - 1);
+                }
 
                 if (query.startsWith("!")) {
                     query = query.substring(1);
@@ -229,7 +232,7 @@ public class Tisql {
                     continue;
                 }
 
-                if(isConnected == false) {
+                if (isConnected == false) {
                     System.out.println("Not connected to database");
                     continue;
                 }
@@ -251,8 +254,7 @@ public class Tisql {
                         else
                             System.out.println("SQL Execute Success");
                     }
-                    if (isMoreResult == false || ( result = stmt.getMoreResults()) == false)
-                    {
+                    if (isMoreResult == false || (result = stmt.getMoreResults()) == false) {
                         System.out.println("getMoreReuslts() returned false");
                         break;
                     }
