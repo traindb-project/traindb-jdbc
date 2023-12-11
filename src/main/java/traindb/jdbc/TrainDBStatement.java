@@ -68,9 +68,9 @@ public class TrainDBStatement implements Statement {
 
     try {
       startTimer();
-      System.out.println("==> Execute Start");
+      //System.out.println("==> Execute Start");
       connection.getQueryExecutor().execute(sql, handler);
-      System.out.println("==> Execute End");
+      //System.out.println("==> Execute End");
       // connection.getQueryExecutor().execute(queryToExecute, handler, maxrows, fetchSize, flags, adaptiveFetch);
     } finally {
       killTimerTask();
@@ -359,9 +359,9 @@ public class TrainDBStatement implements Statement {
 
     try {
       startTimer();
-      System.out.println("==> getMoreResult Start");
+      //System.out.println("==> getMoreResult Start");
       connection.getQueryExecutor().getMoreResult(handler);
-      System.out.println("==> getMoreResult End");
+      //System.out.println("==> getMoreResult End");
       // connection.getQueryExecutor().execute(queryToExecute, handler, maxrows, fetchSize, flags, adaptiveFetch);
     } finally {
       killTimerTask();
@@ -377,7 +377,7 @@ public class TrainDBStatement implements Statement {
 
     synchronized (this) {
       checkClosed();
-      System.out.println("==> getMoreResult isBeforeFirst : " + result.getResultSet().isBeforeFirst());
+      //System.out.println("==> getMoreResult isBeforeFirst : " + result.getResultSet().isBeforeFirst());
       return (result != null && result.getResultSet() != null && result.getResultSet().isBeforeFirst());
     }
   }
