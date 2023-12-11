@@ -167,7 +167,7 @@ public class QueryExecutor {
   private void sendMoreResult(StatementResultHandler handler)
     throws IOException {
     LOGGER.log(Level.FINEST, " FE=> getMoreResults()");
-    System.out.println(" FE=> getMoreResults()");
+    //System.out.println(" FE=> getMoreResults()");
 
     String sql = "incremental rows";
     byte[] data = sql.getBytes();
