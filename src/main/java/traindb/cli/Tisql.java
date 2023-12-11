@@ -147,11 +147,11 @@ public class Tisql {
             System.out.println("+");
             // Print column headers
             for (int i = 1; i <= columnsNumber; i++) {
-                System.out.print("│");
+                System.out.print("|");
                 String columnName = rsmd.getColumnName(i);
                 System.out.print(String.format("%-" + columnWidth[i - 1] + "s", columnName));
             }
-            System.out.println("│");
+            System.out.println("|");
             isFirstResult = false;
         }
 
