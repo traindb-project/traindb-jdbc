@@ -11,6 +11,7 @@ public class Tisql {
     private ResultSet rs = null;
     private boolean isConnected = false;
     private boolean isMoreResult = false;
+    private boolean isFirstResult = true;
 
     public Tisql() {
         scanner = new Scanner(System.in);
@@ -136,24 +137,40 @@ public class Tisql {
                 columnWidth[i - 1] = nameSize;
         }
 
-        // Print column headers
-        for (int i = 1; i <= columnsNumber; i++) {
-            if (i > 1)
-                System.out.print(" | ");
-            String columnName = rsmd.getColumnName(i);
-            System.out.print(String.format("%-" + columnWidth[i - 1] + "s", columnName));
+        if(isFirstResult) {
+            for (int i = 1; i <= columnsNumber; i++) {
+                    System.out.print("+");
+                for (int j = 0; j < columnWidth[i - 1]; j++) {
+                    System.out.print("-");
+                }
+            }
+            System.out.println("+");
+            // Print column headers
+            for (int i = 1; i <= columnsNumber; i++) {
+                System.out.print("│");
+                String columnName = rsmd.getColumnName(i);
+                System.out.print(String.format("%-" + columnWidth[i - 1] + "s", columnName));
+            }
+            System.out.println("│");
+            isFirstResult = false;
         }
-        System.out.println();
+
+        for (int i = 1; i <= columnsNumber; i++) {
+            System.out.print("+");
+            for (int j = 0; j < columnWidth[i - 1]; j++) {
+                System.out.print("-");
+            }
+        }
+        System.out.println("+");
 
         String output = "";
 
         // Print rows
         while (rs.next()) {
             for (int i = 1; i <= columnsNumber; i++) {
-                if (i > 1) {
-                    System.out.print(" | ");
-                }
-
+                
+                System.out.print("|");
+                
                 int columnType = rsmd.getColumnType(i);
 
                 switch (columnType) {
@@ -203,8 +220,15 @@ public class Tisql {
                 }
                 System.out.print(output);
             }
-            System.out.println();
+            System.out.println("|");
         }
+        for (int i = 1; i <= columnsNumber; i++) {
+            System.out.print("+");
+            for (int j = 0; j < columnWidth[i - 1]; j++) {
+                System.out.print("-");
+            }
+        }
+        System.out.println("+");
     }
 
     public void msgLoop() {
@@ -238,8 +262,10 @@ public class Tisql {
                 }
 
                 // Execute query
+                long startTime = System.currentTimeMillis();
                 try {
                     result = stmt.execute(query);
+                    isFirstResult = true;
                 } catch (SQLException e) {
                     System.out.println(e.getMessage());
                     continue;
@@ -250,15 +276,16 @@ public class Tisql {
                     } else {
                         int updateCount = stmt.getUpdateCount();
                         if (updateCount > 0)
-                            System.out.println(updateCount + " rows affected");
+                            System.out.print(updateCount + " rows affected");
                         else
-                            System.out.println("SQL Execute Success");
+                            System.out.print("SQL Execute Success");
                     }
                     if (isMoreResult == false || (result = stmt.getMoreResults()) == false) {
-                        System.out.println("getMoreReuslts() returned false");
                         break;
                     }
                 }
+                long endTime = System.currentTimeMillis();
+                System.out.println(" (" + ((double)(endTime - startTime)/1000) + " sec)");
             }
         } catch (Exception e) {
             // Handle errors for Class.forName
