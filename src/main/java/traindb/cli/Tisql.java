@@ -237,7 +237,7 @@ public class Tisql {
             // Main query execute loop
             while (true) {
                 // Prompt user for query
-                System.out.print("Enter query : ");
+                System.out.print("Tisql > ");
                 String query = "";
                 query = scanner.nextLine();
                 if (query.endsWith(";")) {
