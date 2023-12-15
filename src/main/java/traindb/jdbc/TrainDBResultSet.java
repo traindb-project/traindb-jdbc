@@ -39,9 +39,9 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.MessageFormat;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import traindb.jdbc.core.Field;
@@ -712,7 +712,7 @@ public class TrainDBResultSet implements ResultSet {
   }
 
   public static Map<String, Integer> createColumnNameIndexMap(Field[] fields) {
-    Map<String, Integer> columnNameIndexMap = new HashMap<>(fields.length * 2);
+    Map<String, Integer> columnNameIndexMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     // The JDBC spec says when you have duplicate columns names,
     // the first one should be returned. So load the map in
     // reverse order so the first ones will overwrite later ones.
