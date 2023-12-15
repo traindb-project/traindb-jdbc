@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.MessageFormat;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.index.qual.Positive;
@@ -76,6 +77,10 @@ public class TrainDBResultSet implements ResultSet {
   private Tuple rowBuffer = null; // updateable rowbuffer
   private boolean wasNullFlag = false;
   private boolean onInsertRow = false;
+
+  // Speed up findColumn by caching lookups
+  private @Nullable Map<String, Integer> columnNameIndexMap;
+
   private @Nullable ResultSetMetaData rsMetaData;
 
   public TrainDBResultSet(String originalQuery, TrainDBStatement statement, Field[] fields,
@@ -494,8 +499,7 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public String getString(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return getString(findColumn(columnLabel));
   }
 
   @Override
@@ -512,32 +516,27 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public short getShort(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return 0;
+    return getShort(findColumn(columnLabel));
   }
 
   @Override
   public int getInt(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return 0;
+    return getInt(findColumn(columnLabel));
   }
 
   @Override
   public long getLong(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return 0;
+    return getLong(findColumn(columnLabel));
   }
 
   @Override
   public float getFloat(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return 0;
+    return getFloat(findColumn(columnLabel));
   }
 
   @Override
   public double getDouble(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return 0;
+    return getDouble(findColumn(columnLabel));
   }
 
   @Override
@@ -548,8 +547,7 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public byte[] getBytes(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return getBytes(findColumn(columnLabel));
   }
 
   @Override
@@ -566,8 +564,7 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public Timestamp getTimestamp(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return getTimestamp(findColumn(columnLabel));
   }
 
   @Override
@@ -647,8 +644,7 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public Object getObject(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return getObject(findColumn(columnLabel));
   }
 
   protected @Nullable Object internalGetObject(@Positive int columnIndex, Field field)
@@ -704,7 +700,39 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public int findColumn(String columnLabel) throws SQLException {
-    // TODO Auto-generated method stub
+    checkClosed();
+
+    int col = findColumnIndex(columnLabel);
+    if (col == 0) {
+      throw new TrainDBJdbcException(
+          "The column name " + columnLabel + " was not found in this Resultset.",
+          TrainDBState.UNDEFINED_COLUMN);
+    }
+    return col;
+  }
+
+  public static Map<String, Integer> createColumnNameIndexMap(Field[] fields) {
+    Map<String, Integer> columnNameIndexMap = new HashMap<>(fields.length * 2);
+    // The JDBC spec says when you have duplicate columns names,
+    // the first one should be returned. So load the map in
+    // reverse order so the first ones will overwrite later ones.
+    for (int i = fields.length - 1; i >= 0; i--) {
+      String columnLabel = fields[i].name;
+      columnNameIndexMap.put(columnLabel, i + 1);
+    }
+    return columnNameIndexMap;
+  }
+
+  private int findColumnIndex(String columnName) {
+    if (columnNameIndexMap == null) {
+      columnNameIndexMap = createColumnNameIndexMap(fields);
+    }
+
+    Integer index = columnNameIndexMap.get(columnName);
+    if (index != null) {
+      return index;
+    }
+
     return 0;
   }
 
@@ -1325,8 +1353,7 @@ public class TrainDBResultSet implements ResultSet {
 
   @Override
   public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
-    // TODO Auto-generated method stub
-    return null;
+    return getTimestamp(findColumn(columnLabel), cal);
   }
 
   @Override
