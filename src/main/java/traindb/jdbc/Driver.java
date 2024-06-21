@@ -246,6 +246,15 @@ public final class Driver implements java.sql.Driver {
       return null;
     }
 
+    // connection properties cannot be specified in Tibero
+    String[] urlTokens = url.split(":");
+    if (urlTokens.length >= 3 && urlTokens[2].equalsIgnoreCase("tibero")) {
+      int qPos = url.indexOf('?');
+      if (qPos != -1) {
+        url = url.substring(0, qPos);
+      }
+    }
+
     try {
       logger.debug("Connecting with URL: " + url);
       long timeout = timeout(props);
