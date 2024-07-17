@@ -270,6 +270,12 @@ public class Tisql {
                     continue;
                 }
 
+                if (query.compareTo("exit") == 0)
+                {
+                    System.out.println("Exit command");
+                    System.exit(0);
+                }
+
                 if (query.startsWith("!")) {
                     query = query.substring(1);
                     try {
