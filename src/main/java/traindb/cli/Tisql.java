@@ -45,8 +45,8 @@ public class Tisql {
                 return "jdbc:traindb:altibase";
             case "tibero":
                 return "jdbc:traindb:tibero";
-            case "postgres":
-                return "jdbc:traindb:postgres";
+            case "postgresql":
+                return "jdbc:traindb:postgresql";
             default:
                 return "invalid driver";
         }
@@ -66,15 +66,28 @@ public class Tisql {
         System.out.println("Connecting to database...");
         driver = getDriverName(tokens[1]);
 
-        String url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
-        if (tokens.length < 7) {
+        String url = null;
+        int offset = 0;
+        if (tokens[1].equals("postgresql")) {
+            if (tokens.length == 4 || tokens.length == 6)
+                url = driver + "://" + tokens[2] + "/" + tokens[3];
+            else {
+                offset=1;
+                url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
+            }
+        } else {
+            offset = 1;
+            url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
+        }
+
+        if (tokens.length < 6) {
             System.out.print("Enter user : ");
             String USER = scanner.nextLine();
             System.out.print("Enter password : ");
             String PASS = scanner.nextLine();
             conn = DriverManager.getConnection(url, USER, PASS);
         } else {
-            conn = DriverManager.getConnection(url, tokens[5], tokens[6]);
+            conn = DriverManager.getConnection(url, tokens[offset + 4], tokens[offset + 5]);
         }
         stmt = conn.createStatement();
         isConnected = true;
