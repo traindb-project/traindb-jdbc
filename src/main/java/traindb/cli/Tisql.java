@@ -77,7 +77,11 @@ public class Tisql {
             }
         } else {
             offset = 1;
-            url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
+            if(tokens[1].equals("tibero")) {
+                url = driver + ":thin:@" + tokens[2] + ":" + tokens[3] + ":" + tokens[4];
+            } else {
+                url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
+            }
         }
 
         if (tokens.length < 6) {
