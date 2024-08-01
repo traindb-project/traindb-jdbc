@@ -47,6 +47,10 @@ public class Tisql {
                 return "jdbc:traindb:tibero";
             case "postgresql":
                 return "jdbc:traindb:postgresql";
+            case "bigquery":
+                return "jdbc:traindb:bigquery";
+            case "redshift":
+                return "jdbc:traindb:redshift";
             default:
                 return "invalid driver";
         }
@@ -75,6 +79,8 @@ public class Tisql {
                 offset=1;
                 url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
             }
+        } else if (tokens[1].equals("bigquery")) {
+            url = driver + "://" + tokens[2] + ":" + tokens[3];
         } else {
             offset = 1;
             if(tokens[1].equals("tibero")) {
@@ -84,15 +90,29 @@ public class Tisql {
             }
         }
 
-        if (tokens.length < 6) {
+        String user = null;
+        String password = null;
+        if (tokens[1].equals("bigquery")) {
+            System.out.print("Enter ProjectId : ");
+            String projectId = scanner.nextLine();
+            System.out.print("Enter Service Email : ");
+            String serviceEmail = scanner.nextLine();
+            System.out.print("Enter Auth Key Path : ");
+            String keyPath = scanner.nextLine();
+            url += ";ProjectId=" + projectId + 
+                   ";OAuthType=0;OAuthServiceAcctEmail=" + serviceEmail +
+                   ";OAuthPvtKeyPath=" + keyPath;
+        } else if (tokens.length < 6) {
             System.out.print("Enter user : ");
-            String USER = scanner.nextLine();
+            user = scanner.nextLine();
             System.out.print("Enter password : ");
-            String PASS = scanner.nextLine();
-            conn = DriverManager.getConnection(url, USER, PASS);
+            password = scanner.nextLine();
         } else {
-            conn = DriverManager.getConnection(url, tokens[offset + 4], tokens[offset + 5]);
+            user = tokens[offset + 4];
+            password = tokens[offset + 5];
         }
+
+        conn = DriverManager.getConnection(url, user, password);
         stmt = conn.createStatement();
         isConnected = true;
         System.out.println("Connection Success !!!");
@@ -323,7 +343,7 @@ public class Tisql {
                 while (true) {
                     if (result) {
                         if(isMoreResult == false && msgCnt == 3) {
-                            Thread.sleep(600);
+                            //Thread.sleep(600);
                         }
                         handleResult();
                     } else {
@@ -336,7 +356,7 @@ public class Tisql {
                     if (isMoreResult == false || (result = stmt.getMoreResults()) == false) {
                         break;
                     }
-                    Thread.sleep(75);
+                    //Thread.sleep(75);
                 }
                 long endTime = System.currentTimeMillis();
                 System.out.println(" (" + ((double)(endTime - startTime)/1000) + " sec)");
