@@ -33,6 +33,112 @@ public class Tisql {
         System.out.println("----------");
     }
 
+    public String getDriverName(String databaseName) {
+        switch(databaseName) {
+            case "traindb":
+                return "jdbc:traindb";
+            case "kairos":
+                return "jdbc:traindb:kairos";
+            case "mysql":
+                return "jdbc:traindb:mysql";
+            case "altibase":
+                return "jdbc:traindb:altibase";
+            case "tibero":
+                return "jdbc:traindb:tibero";
+            case "postgresql":
+                return "jdbc:traindb:postgresql";
+            case "bigquery":
+                return "jdbc:traindb:bigquery";
+            case "redshift":
+                return "jdbc:traindb:redshift";
+            default:
+                return "invalid driver";
+        }
+    }
+
+    public void connectDBMS(String[] tokens) throws SQLException {
+        String driver = null;
+        if (tokens.length < 5 || tokens.length > 7) {
+            System.out.println("Invalid command");
+            System.out.println("Usage : !connect <driver> <host> <port> <database>");
+            System.out.println("        !connect <driver> <host> <port> <database> <user> <password>");
+            System.out.println("Example : !connect kairos localhost 5000 mydatabase root root");
+
+            return;
+        }
+
+        System.out.println("Connecting to database...");
+        driver = getDriverName(tokens[1]);
+
+        String url = null;
+        int offset = 0;
+        if (tokens[1].equals("postgresql")) {
+            if (tokens.length == 4 || tokens.length == 6)
+                url = driver + "://" + tokens[2] + "/" + tokens[3];
+            else {
+                offset=1;
+                url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
+            }
+        } else if (tokens[1].equals("bigquery")) {
+            url = driver + "://" + tokens[2] + ":" + tokens[3];
+        } else {
+            offset = 1;
+            if(tokens[1].equals("tibero")) {
+                url = driver + ":thin:@" + tokens[2] + ":" + tokens[3] + ":" + tokens[4];
+            } else {
+                url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
+            }
+        }
+
+        String user = null;
+        String password = null;
+        if (tokens[1].equals("bigquery")) {
+            System.out.print("Enter ProjectId : ");
+            String projectId = scanner.nextLine();
+            System.out.print("Enter Service Email : ");
+            String serviceEmail = scanner.nextLine();
+            System.out.print("Enter Auth Key Path : ");
+            String keyPath = scanner.nextLine();
+            url += ";ProjectId=" + projectId + 
+                   ";OAuthType=0;OAuthServiceAcctEmail=" + serviceEmail +
+                   ";OAuthPvtKeyPath=" + keyPath;
+        } else if (tokens.length < 6) {
+            System.out.print("Enter user : ");
+            user = scanner.nextLine();
+            System.out.print("Enter password : ");
+            password = scanner.nextLine();
+        } else {
+            user = tokens[offset + 4];
+            password = tokens[offset + 5];
+        }
+
+        conn = DriverManager.getConnection(url, user, password);
+        stmt = conn.createStatement();
+        isConnected = true;
+        System.out.println("Connection Success !!!");
+    }
+
+    public void disconnectDBMS() throws SQLException {
+        if (!isConnected) {
+            System.out.println("Not connected to database");
+        } else {
+            if (rs != null && !rs.isClosed()) {
+                rs.close();
+                rs = null;
+            }
+            if (stmt != null && !stmt.isClosed()) {
+                stmt.close();
+                stmt = null;
+            }
+            if (conn != null && !conn.isClosed()) {
+                conn.close();
+                conn = null;
+            }
+            isConnected = false;
+            System.out.println("Disconnected from database");
+        }
+    }
+
     public void processCommands(String command) throws ClassNotFoundException, SQLException {
         // Process Commands
         String[] tokens = command.split(" ");
@@ -48,58 +154,10 @@ public class Tisql {
 
         switch (tokens[0]) {
             case "connect":
-                String driver = null;
-                if (tokens.length < 5 || tokens.length > 7) {
-                    System.out.println("Invalid command");
-                    System.out.println("Usage : !connect <driver> <host> <port> <database>");
-                    System.out.println("        !connect <driver> <host> <port> <database> <user> <password>");
-                    System.out.println("Example : !connect kairos localhost 5000 mydatabase root root");
-                }
-
-                System.out.println("Connecting to database...");
-                if (tokens[1].equals("kairos")) {
-                    // Register JDBC driver
-                    driver = "jdbc:traindb:kairos";
-                } else if (tokens[1].equals("traindb")) {
-                    // Register JDBC driver
-                    driver = "jdbc:traindb";
-                } else {
-                    System.out.println("Invalid driver");
-                }
-
-                String url = driver + "://" + tokens[2] + ":" + tokens[3] + "/" + tokens[4];
-                if (tokens.length < 7) {
-                    System.out.print("Enter user : ");
-                    String USER = scanner.nextLine();
-                    System.out.print("Enter password : ");
-                    String PASS = scanner.nextLine();
-                    conn = DriverManager.getConnection(url, USER, PASS);
-                } else {
-                    conn = DriverManager.getConnection(url, tokens[5], tokens[6]);
-                }
-                stmt = conn.createStatement();
-                isConnected = true;
-                System.out.println("Connection Success !!!");
+                connectDBMS(tokens);
                 break;
             case "disconnect":
-                if (!isConnected) {
-                    System.out.println("Not connected to database");
-                } else {
-                    if (rs != null && !rs.isClosed()) {
-                        rs.close();
-                        rs = null;
-                    }
-                    if (stmt != null && !stmt.isClosed()) {
-                        stmt.close();
-                        stmt = null;
-                    }
-                    if (conn != null && !conn.isClosed()) {
-                        conn.close();
-                        conn = null;
-                    }
-                    isConnected = false;
-                    System.out.println("Disconnected from database");
-                }
+                disconnectDBMS();
                 break;
             case "moreresult":
                 if (tokens[1].equals("on")) {
@@ -153,15 +211,15 @@ public class Tisql {
             }
             System.out.println("|");
             isFirstResult = false;
-        }
 
-        for (int i = 1; i <= columnsNumber; i++) {
-            System.out.print("+");
-            for (int j = 0; j < columnWidth[i - 1]; j++) {
-                System.out.print("-");
+            for (int i = 1; i <= columnsNumber; i++) {
+                System.out.print("+");
+                for (int j = 0; j < columnWidth[i - 1]; j++) {
+                    System.out.print("-");
+                }
             }
+            System.out.println("+");
         }
-        System.out.println("+");
 
         String output = "";
 
@@ -234,14 +292,25 @@ public class Tisql {
     public void msgLoop() {
         try {
             boolean result = false;
+            int msgCnt = 0;
             // Main query execute loop
             while (true) {
                 // Prompt user for query
-                System.out.print("Tisql > ");
+                System.out.print("Tisql> ");
                 String query = "";
                 query = scanner.nextLine();
                 if (query.endsWith(";")) {
                     query = query.substring(0, query.length() - 1);
+                }
+
+                if (query.isEmpty() || query.length() == 0) {
+                    continue;
+                }
+
+                if (query.compareTo("exit") == 0)
+                {
+                    System.out.println("Exit command");
+                    System.exit(0);
                 }
 
                 if (query.startsWith("!")) {
@@ -265,6 +334,7 @@ public class Tisql {
                 long startTime = System.currentTimeMillis();
                 try {
                     result = stmt.execute(query);
+                    msgCnt++;
                     isFirstResult = true;
                 } catch (SQLException e) {
                     System.out.println(e.getMessage());
@@ -272,6 +342,9 @@ public class Tisql {
                 }
                 while (true) {
                     if (result) {
+                        if(isMoreResult == false && msgCnt == 3) {
+                            //Thread.sleep(600);
+                        }
                         handleResult();
                     } else {
                         int updateCount = stmt.getUpdateCount();
@@ -283,6 +356,7 @@ public class Tisql {
                     if (isMoreResult == false || (result = stmt.getMoreResults()) == false) {
                         break;
                     }
+                    //Thread.sleep(75);
                 }
                 long endTime = System.currentTimeMillis();
                 System.out.println(" (" + ((double)(endTime - startTime)/1000) + " sec)");
