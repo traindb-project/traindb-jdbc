@@ -284,7 +284,15 @@ public abstract class BaseDataSource implements CommonDataSource, Referenceable 
     String traindb_url_protocol = properties.getProperty("TRAINDB_URL_PROTOCOL", "jdbc:traindb");
 
     StringBuilder url = new StringBuilder(1024);
-    url.append(traindb_url_protocol).append("://");
+    url.append(traindb_url_protocol);
+
+    // protocol delimiter
+    if (traindb_url_protocol.contains("tibero")) {
+      url.append(":@");
+    } else {
+      url.append("://");
+    }
+
     for (int i = 0; i < serverNames.length; i++) {
       if (i > 0) {
         url.append(",");
@@ -294,7 +302,14 @@ public abstract class BaseDataSource implements CommonDataSource, Referenceable 
         url.append(":").append(portNumbers[i]);
       }
     }
-    url.append("/");
+
+    // database delimiter
+    if (traindb_url_protocol.contains("tibero")) {
+      url.append(":");
+    } else {
+      url.append("/");
+    }
+
     if (databaseName != null) {
       url.append(databaseName);
     }
