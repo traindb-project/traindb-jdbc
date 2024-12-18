@@ -121,4 +121,11 @@ limitations under the License.
         </plugins>
     </build>
 
+    <scm>
+      <connection>scm:git:https://github.com/traindb-project/traindb-jdbc.git</connection>
+      <developerConnection>scm:git:https://github.com/traindb-project/traindb-jdbc.git</developerConnection>
+      <tag>HEAD</tag>
+      <url>https://github.com/traindb-project/traindb-jdbc</url>
+    </scm>
+
 </project>
